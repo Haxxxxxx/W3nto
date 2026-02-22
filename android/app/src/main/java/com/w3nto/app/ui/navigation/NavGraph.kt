@@ -3,6 +3,7 @@ package com.w3nto.app.ui.navigation
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -21,6 +22,7 @@ import com.w3nto.app.ui.screens.favorites.FavoritesScreen
 import com.w3nto.app.ui.screens.landing.LandingScreen
 import com.w3nto.app.ui.screens.profile.PublicProfileScreen
 import com.w3nto.app.wallet.WalletManager
+import kotlinx.coroutines.flow.StateFlow
 
 private val bottomNavRoutes = setOf(
     Screen.Discover.route,
@@ -31,17 +33,41 @@ private val bottomNavRoutes = setOf(
 fun NavGraph(
     walletManager: WalletManager,
     authRepository: AuthRepository,
-    activityResultSender: ActivityResultSender
+    activityResultSender: ActivityResultSender,
+    pendingDeepLinkRoute: StateFlow<String?> = kotlinx.coroutines.flow.MutableStateFlow(null),
+    onDeepLinkConsumed: () -> Unit = {}
 ) {
     val navController = rememberNavController()
     val firebaseUser by authRepository.authStateFlow().collectAsState(initial = authRepository.currentUser)
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
+    val deepLinkRoute by pendingDeepLinkRoute.collectAsState()
 
     val startDestination = if (firebaseUser != null) {
         Screen.Discover.route
     } else {
         Screen.Landing.route
+    }
+
+    // Auto-navigate to Discover when auth completes while on Landing/ConnectWallet
+    LaunchedEffect(firebaseUser) {
+        if (firebaseUser != null) {
+            val route = navController.currentDestination?.route
+            if (route == Screen.Landing.route || route == Screen.ConnectWallet.route) {
+                navController.navigate(Screen.Discover.route) {
+                    popUpTo(Screen.Landing.route) { inclusive = true }
+                }
+            }
+        }
+    }
+
+    // Handle deep link navigation
+    LaunchedEffect(deepLinkRoute) {
+        val route = deepLinkRoute ?: return@LaunchedEffect
+        navController.navigate(route) {
+            launchSingleTop = true
+        }
+        onDeepLinkConsumed()
     }
 
     Scaffold(
@@ -96,8 +122,8 @@ fun NavGraph(
 
             composable(Screen.Favorites.route) {
                 FavoritesScreen(
-                    onProfileClick = { username ->
-                        navController.navigate(Screen.PublicProfile().createRoute(username))
+                    onPageClick = { username, pageSlug ->
+                        navController.navigate(Screen.PublicProfile().createRoute(username, pageSlug))
                     }
                 )
             }

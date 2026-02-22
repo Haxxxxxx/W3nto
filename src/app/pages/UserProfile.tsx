@@ -2,8 +2,9 @@ import { useParams, useNavigate, Link } from "react-router";
 import { useEffect, useState } from "react";
 import { Profile, BentoPage, Block } from "../types";
 import { getProfileByUsername } from "../utils/storage";
-import { ExternalLink, Grid3x3, ArrowLeft } from "lucide-react";
+import { ExternalLink, Grid3x3, ArrowLeft, Share2 } from "lucide-react";
 import W3ntoLogo from "../components/W3ntoLogo";
+import ShareModal from "../components/ShareModal";
 import TokenChart from "../components/TokenChart";
 import { socialPlatforms, chainLogos } from "../utils/socialPlatforms";
 
@@ -14,6 +15,7 @@ export default function UserProfile() {
   const [currentPage, setCurrentPage] = useState<BentoPage | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (!username) return;
@@ -267,6 +269,21 @@ export default function UserProfile() {
             )}
           </div>
 
+          <button
+            onClick={() => {
+              const url = `${window.location.origin}/${profile.username}/${currentPage.slug}`;
+              setShareUrl(url);
+            }}
+            className="mt-4 px-4 py-2 rounded-full text-sm inline-flex items-center gap-2 transition-all hover:scale-105"
+            style={{
+              backgroundColor: currentPage.theme.cardBackground,
+              color: currentPage.theme.textColor,
+            }}
+          >
+            <Share2 className="size-4" />
+            Share
+          </button>
+
           {profile.pages.length > 1 && (
             <div className="flex items-center justify-center gap-2 mt-6 flex-wrap">
               {profile.pages.map((page) => (
@@ -343,6 +360,11 @@ export default function UserProfile() {
           </Link>
         </div>
       </div>
+
+      {/* Share Modal */}
+      {shareUrl && (
+        <ShareModal url={shareUrl} onClose={() => setShareUrl(null)} />
+      )}
     </div>
   );
 }

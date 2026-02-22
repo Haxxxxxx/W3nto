@@ -35,7 +35,9 @@ data class Theme(
             primaryColor = map["primaryColor"] as? String ?: "#6c5ce7",
             secondaryColor = map["secondaryColor"] as? String ?: "#a29bfe",
             textColor = map["textColor"] as? String ?: "#ffffff",
-            borderRadius = (map["borderRadius"] as? Number)?.toInt() ?: 16,
+            borderRadius = (map["borderRadius"] as? Number)?.toInt()
+                ?: (map["borderRadius"] as? String)?.filter { it.isDigit() }?.toIntOrNull()
+                ?: 16,
             fontFamily = map["fontFamily"] as? String ?: "Inter",
             buttonStyle = map["buttonStyle"] as? String ?: "rounded",
             buttonBackground = map["buttonBackground"] as? String ?: "#6c5ce7",

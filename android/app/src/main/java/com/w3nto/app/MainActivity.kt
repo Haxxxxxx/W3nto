@@ -15,7 +15,9 @@ import com.w3nto.app.ui.navigation.NavGraph
 import com.w3nto.app.ui.theme.W3ntoTheme
 import com.w3nto.app.wallet.WalletManager
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.MainScope
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -28,12 +30,13 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var authRepository: AuthRepository
 
-    private val scope = MainScope()
     private lateinit var activityResultSender: ActivityResultSender
+
+    private val _pendingDeepLinkRoute = MutableStateFlow<String?>(null)
+    val pendingDeepLinkRoute = _pendingDeepLinkRoute.asStateFlow()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Must register before STARTED state
         activityResultSender = ActivityResultSender(this)
         enableEdgeToEdge()
         handleIntent(intent)
@@ -47,7 +50,9 @@ class MainActivity : ComponentActivity() {
                     NavGraph(
                         walletManager = walletManager,
                         authRepository = authRepository,
-                        activityResultSender = activityResultSender
+                        activityResultSender = activityResultSender,
+                        pendingDeepLinkRoute = pendingDeepLinkRoute,
+                        onDeepLinkConsumed = { consumeDeepLinkRoute() }
                     )
                 }
             }
@@ -61,13 +66,34 @@ class MainActivity : ComponentActivity() {
 
     private fun handleIntent(intent: Intent?) {
         val uri = intent?.data ?: return
-        if (uri.scheme != "w3nto") return
 
-        when (uri.host) {
-            "onConnect" -> walletManager.handlePhantomCallback(uri)
-            "onSignMessage" -> scope.launch {
-                walletManager.handlePhantomSignMessageCallback(uri)
+        when (uri.scheme) {
+            "w3nto" -> {
+                // Phantom wallet callbacks
+                when (uri.host) {
+                    "onConnect" -> walletManager.handlePhantomCallback(uri)
+                    "onSignMessage" -> lifecycleScope.launch {
+                        walletManager.handlePhantomSignMessageCallback(uri)
+                    }
+                }
+            }
+            "https", "http" -> {
+                // HTTPS deep links: w3nto.app/{username} or w3nto.app/{username}/{pageSlug}
+                val pathSegments = uri.pathSegments ?: return
+                if (pathSegments.isEmpty()) return
+                val username = pathSegments[0]
+                val pageSlug = pathSegments.getOrNull(1)
+                val route = if (pageSlug != null) {
+                    "profile/$username?page=$pageSlug"
+                } else {
+                    "profile/$username"
+                }
+                _pendingDeepLinkRoute.value = route
             }
         }
+    }
+
+    fun consumeDeepLinkRoute() {
+        _pendingDeepLinkRoute.value = null
     }
 }

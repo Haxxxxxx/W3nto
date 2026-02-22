@@ -20,7 +20,7 @@ class SagaSeedVault @Inject constructor(
     companion object {
         private const val APP_IDENTITY_NAME = "W3nto"
         private val APP_IDENTITY_URI = Uri.parse("https://w3nto.app")
-        private val APP_IDENTITY_ICON = Uri.parse("favicon.ico")
+        private val APP_IDENTITY_ICON = Uri.parse("https://w3nto.app/favicon.ico")
     }
 
     private val connectionIdentity = ConnectionIdentity(

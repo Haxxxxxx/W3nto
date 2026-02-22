@@ -8,55 +8,75 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.w3nto.app.ui.theme.Purple300
 import com.w3nto.app.ui.theme.Purple500
+import com.w3nto.app.ui.theme.Pink500
+import com.w3nto.app.ui.theme.DarkBackground
+import com.w3nto.app.ui.theme.DarkSurfaceVariant
 
 @Composable
 fun LandingScreen(onConnectWallet: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(24.dp),
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        DarkBackground,
+                        DarkSurfaceVariant,
+                        DarkBackground
+                    )
+                )
+            )
+            .padding(32.dp),
         contentAlignment = Alignment.Center
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // Logo / Brand
+            // Logo with gradient text effect
             Text(
                 text = "W3nto",
-                fontSize = 48.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
+                style = TextStyle(
+                    fontSize = 56.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    brush = Brush.horizontalGradient(
+                        colors = listOf(Purple500, Purple300, Pink500)
+                    )
+                )
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             Text(
                 text = "Your Web3 Bento Profile",
-                style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.onBackground,
+                fontSize = 22.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color.White,
                 textAlign = TextAlign.Center
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = "Discover Web3 creators and their profiles",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                text = "Discover Web3 creators and explore their on-chain identities",
+                fontSize = 16.sp,
+                color = Color.White.copy(alpha = 0.6f),
                 textAlign = TextAlign.Center,
+                lineHeight = 24.sp,
                 modifier = Modifier.widthIn(max = 320.dp)
             )
 
-            Spacer(modifier = Modifier.height(48.dp))
+            Spacer(modifier = Modifier.height(56.dp))
 
+            // CTA button with gradient
             Button(
                 onClick = onConnectWallet,
                 modifier = Modifier
@@ -64,22 +84,23 @@ fun LandingScreen(onConnectWallet: () -> Unit) {
                     .height(56.dp),
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary
+                    containerColor = Purple500
                 )
             ) {
                 Text(
-                    text = "Connect Wallet",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold
+                    text = "Get Started",
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.White
                 )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
             Text(
-                text = "Built for Solana Saga",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                text = "Built for Solana Seeker",
+                fontSize = 13.sp,
+                color = Color.White.copy(alpha = 0.4f)
             )
         }
     }

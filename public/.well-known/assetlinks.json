@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.w3nto.app",
+      "sha256_cert_fingerprints": [
+        "04:DD:50:7A:0A:D3:F4:61:4F:AF:D7:36:83:0D:76:89:F5:86:C7:E7:57:30:66:DF:FC:80:0B:1D:D5:09:D5:E3"
+      ]
+    }
+  }
+]

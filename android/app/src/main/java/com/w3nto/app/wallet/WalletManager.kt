@@ -201,7 +201,7 @@ class WalletManager @Inject constructor(
                 .await()
 
             @Suppress("UNCHECKED_CAST")
-            val resultData = result.data as Map<String, Any>
+            val resultData = result.getData() as Map<String, Any>
             val token = resultData["token"] as String
 
             authRepository.signInWithCustomToken(token).getOrThrow()
@@ -224,7 +224,7 @@ class WalletManager @Inject constructor(
         phantomWallet.clearSession()
     }
 
-    fun generateAuthMessage(publicKey: String): String {
+    internal fun generateAuthMessage(publicKey: String): String {
         return "Sign in to W3nto with wallet: $publicKey\nTimestamp: ${System.currentTimeMillis()}"
     }
 

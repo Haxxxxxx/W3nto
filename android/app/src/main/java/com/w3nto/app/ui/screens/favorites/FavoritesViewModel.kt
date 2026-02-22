@@ -3,7 +3,7 @@ package com.w3nto.app.ui.screens.favorites
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
-import com.w3nto.app.data.model.Profile
+import com.w3nto.app.data.model.FavoritePage
 import com.w3nto.app.data.repository.FavoritesRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,9 +13,10 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class FavoritesUiState(
-    val favorites: List<Profile> = emptyList(),
+    val favorites: List<FavoritePage> = emptyList(),
     val isLoading: Boolean = true,
-    val error: String? = null
+    val error: String? = null,
+    val requiresAuth: Boolean = false
 )
 
 @HiltViewModel
@@ -32,14 +33,18 @@ class FavoritesViewModel @Inject constructor(
     }
 
     fun loadFavorites() {
-        val userId = auth.currentUser?.uid ?: return
+        val userId = auth.currentUser?.uid
+        if (userId == null) {
+            _uiState.value = FavoritesUiState(isLoading = false, requiresAuth = true)
+            return
+        }
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            val result = favoritesRepository.getFavorites(userId)
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null, requiresAuth = false)
+            val result = favoritesRepository.getPageFavorites(userId)
             result.fold(
-                onSuccess = { profiles ->
+                onSuccess = { favorites ->
                     _uiState.value = _uiState.value.copy(
-                        favorites = profiles,
+                        favorites = favorites,
                         isLoading = false
                     )
                 },
@@ -53,16 +58,17 @@ class FavoritesViewModel @Inject constructor(
         }
     }
 
-    fun removeFavorite(username: String) {
+    fun removeFavorite(username: String, pageId: String) {
         val userId = auth.currentUser?.uid ?: return
         viewModelScope.launch {
-            // Optimistically remove from list immediately
+            // Optimistically remove from list
             _uiState.value = _uiState.value.copy(
-                favorites = _uiState.value.favorites.filter { it.username != username }
+                favorites = _uiState.value.favorites.filter {
+                    !(it.username == username && it.pageId == pageId)
+                }
             )
-            val result = favoritesRepository.removeFavorite(userId, username)
+            val result = favoritesRepository.removePageFavorite(userId, username, pageId)
             result.onFailure { error ->
-                // On failure, reload the real state from Firestore
                 _uiState.value = _uiState.value.copy(
                     error = error.message ?: "Failed to remove favorite"
                 )

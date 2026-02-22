@@ -46,7 +46,8 @@ data class Block(
     val nftTokenId: String? = null,
     val nftName: String? = null,
     val nftImage: String? = null,
-    val socialPlatform: SocialPlatform? = null
+    val socialPlatform: SocialPlatform? = null,
+    val imageUrl: String? = null
 ) {
     fun toMap(): Map<String, Any?> = buildMap {
         put("type", type.name.lowercase())
@@ -70,6 +71,7 @@ data class Block(
         put("nftName", nftName)
         put("nftImage", nftImage)
         put("socialPlatform", socialPlatform?.name?.lowercase())
+        put("imageUrl", imageUrl)
     }
 
     companion object {
@@ -96,7 +98,8 @@ data class Block(
             nftTokenId = map["nftTokenId"] as? String,
             nftName = map["nftName"] as? String,
             nftImage = map["nftImage"] as? String,
-            socialPlatform = SocialPlatform.entries.find { it.name.equals(map["socialPlatform"] as? String, ignoreCase = true) }
+            socialPlatform = SocialPlatform.entries.find { it.name.equals(map["socialPlatform"] as? String, ignoreCase = true) },
+            imageUrl = map["imageUrl"] as? String
         )
     }
 }

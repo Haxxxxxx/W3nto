@@ -9,23 +9,25 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.w3nto.app.data.model.Profile
+import coil.compose.AsyncImage
+import com.w3nto.app.data.model.FavoritePage
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FavoritesScreen(
-    onProfileClick: (String) -> Unit,
+    onPageClick: (username: String, pageSlug: String) -> Unit,
     viewModel: FavoritesViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -42,6 +44,10 @@ fun FavoritesScreen(
                     }
                 }
 
+                uiState.requiresAuth -> {
+                    AuthRequiredState()
+                }
+
                 uiState.favorites.isEmpty() -> {
                     EmptyFavoritesState()
                 }
@@ -54,12 +60,12 @@ fun FavoritesScreen(
                     ) {
                         items(
                             items = uiState.favorites,
-                            key = { it.username }
-                        ) { profile ->
+                            key = { "${it.username}:::${it.pageId}" }
+                        ) { fav ->
                             SwipeToDeleteFavoriteItem(
-                                profile = profile,
-                                onDelete = { viewModel.removeFavorite(profile.username) },
-                                onClick = { onProfileClick(profile.username) }
+                                favorite = fav,
+                                onDelete = { viewModel.removeFavorite(fav.username, fav.pageId) },
+                                onClick = { onPageClick(fav.username, fav.pageSlug) }
                             )
                         }
                     }
@@ -81,7 +87,7 @@ fun FavoritesScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SwipeToDeleteFavoriteItem(
-    profile: Profile,
+    favorite: FavoritePage,
     onDelete: () -> Unit,
     onClick: () -> Unit
 ) {
@@ -116,13 +122,13 @@ private fun SwipeToDeleteFavoriteItem(
             }
         }
     ) {
-        FavoriteProfileCard(profile = profile, onClick = onClick)
+        FavoritePageCard(favorite = favorite, onClick = onClick)
     }
 }
 
 @Composable
-private fun FavoriteProfileCard(
-    profile: Profile,
+private fun FavoritePageCard(
+    favorite: FavoritePage,
     onClick: () -> Unit
 ) {
     Card(
@@ -141,28 +147,41 @@ private fun FavoriteProfileCard(
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(
-                modifier = Modifier
-                    .size(52.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primaryContainer),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = (profile.displayName.firstOrNull() ?: profile.username.firstOrNull() ?: '?')
-                        .uppercaseChar()
-                        .toString(),
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    fontWeight = FontWeight.Bold
+            // Avatar
+            if (favorite.profileAvatar.isNotEmpty()) {
+                AsyncImage(
+                    model = favorite.profileAvatar,
+                    contentDescription = "${favorite.profileDisplayName} avatar",
+                    modifier = Modifier
+                        .size(52.dp)
+                        .clip(CircleShape),
+                    contentScale = ContentScale.Crop
                 )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(52.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primaryContainer),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = (favorite.profileDisplayName.firstOrNull()
+                            ?: favorite.username.firstOrNull() ?: '?')
+                            .uppercaseChar()
+                            .toString(),
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.width(16.dp))
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = profile.displayName.ifBlank { profile.username },
+                    text = favorite.pageName,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -170,21 +189,42 @@ private fun FavoriteProfileCard(
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    text = "@${profile.username}",
+                    text = "by @${favorite.username}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary
                 )
-                if (profile.bio.isNotBlank()) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = profile.bio,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
             }
+        }
+    }
+}
+
+@Composable
+private fun AuthRequiredState() {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(32.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(
+                imageVector = Icons.Default.Lock,
+                contentDescription = null,
+                modifier = Modifier.size(72.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "Connect your wallet",
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Sign in to save and view your favorites",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
@@ -212,7 +252,7 @@ private fun EmptyFavoritesState() {
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Tap the star on any profile to save it here",
+                text = "Tap the star on any page to save it here",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

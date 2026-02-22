@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.w3nto.app.data.model.BentoPage
 import com.w3nto.app.data.model.Block
+import com.w3nto.app.data.model.FavoritePage
 import com.w3nto.app.data.model.Profile
 import com.w3nto.app.data.repository.BlockRepository
 import com.w3nto.app.data.repository.FavoritesRepository
@@ -25,6 +26,7 @@ data class PublicProfileUiState(
     val blocks: List<Block> = emptyList(),
     val isLoading: Boolean = true,
     val notFound: Boolean = false,
+    val error: String? = null,
     val isFavorited: Boolean = false
 )
 
@@ -48,11 +50,24 @@ class ProfileViewModel @Inject constructor(
         loadProfile()
     }
 
+    fun retryLoad() {
+        _uiState.value = PublicProfileUiState()
+        loadProfile()
+    }
+
     private fun loadProfile() {
         viewModelScope.launch {
             val result = profileRepository.getProfile(username)
-            val profile = result.getOrNull()
 
+            result.onFailure { e ->
+                _uiState.value = PublicProfileUiState(
+                    isLoading = false,
+                    error = e.message ?: "Failed to load profile"
+                )
+                return@launch
+            }
+
+            val profile = result.getOrNull()
             if (profile == null) {
                 _uiState.value = PublicProfileUiState(isLoading = false, notFound = true)
                 return@launch
@@ -77,33 +92,38 @@ class ProfileViewModel @Inject constructor(
                     blocks = blocksResult.getOrDefault(emptyList()),
                     isLoading = false
                 )
+                checkPageFavorited(currentPage.id)
             } else {
                 _uiState.value = _uiState.value.copy(isLoading = false)
-            }
-
-            // Check favorite status for authenticated users
-            val userId = auth.currentUser?.uid
-            if (userId != null) {
-                val isFavorited = favoritesRepository.isFavorited(userId, username)
-                    .getOrDefault(false)
-                _uiState.value = _uiState.value.copy(isFavorited = isFavorited)
             }
         }
     }
 
+    private fun checkPageFavorited(pageId: String) {
+        val userId = auth.currentUser?.uid ?: return
+        viewModelScope.launch {
+            val isFavorited = favoritesRepository.isPageFavorited(userId, username, pageId)
+                .getOrDefault(false)
+            _uiState.value = _uiState.value.copy(isFavorited = isFavorited)
+        }
+    }
+
     fun selectPage(page: BentoPage) {
-        _uiState.value = _uiState.value.copy(currentPage = page, isLoading = true)
+        _uiState.value = _uiState.value.copy(currentPage = page, isLoading = true, isFavorited = false)
         viewModelScope.launch {
             val blocksResult = blockRepository.getBlocks(username, page.id)
             _uiState.value = _uiState.value.copy(
                 blocks = blocksResult.getOrDefault(emptyList()),
                 isLoading = false
             )
+            checkPageFavorited(page.id)
         }
     }
 
     fun toggleFavorite() {
         val userId = auth.currentUser?.uid ?: return
+        val currentPage = _uiState.value.currentPage ?: return
+        val profile = _uiState.value.profile ?: return
         val currentlyFavorited = _uiState.value.isFavorited
 
         // Optimistic update
@@ -111,9 +131,17 @@ class ProfileViewModel @Inject constructor(
 
         viewModelScope.launch {
             val result = if (currentlyFavorited) {
-                favoritesRepository.removeFavorite(userId, username)
+                favoritesRepository.removePageFavorite(userId, username, currentPage.id)
             } else {
-                favoritesRepository.addFavorite(userId, username)
+                val favorite = FavoritePage(
+                    username = username,
+                    pageId = currentPage.id,
+                    pageName = currentPage.name,
+                    pageSlug = currentPage.slug,
+                    profileDisplayName = profile.displayName,
+                    profileAvatar = profile.avatar
+                )
+                favoritesRepository.addPageFavorite(userId, favorite)
             }
             result.onFailure {
                 // Revert on failure

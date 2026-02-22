@@ -19,7 +19,6 @@ import {
   TrendingUp,
   Image as NFTIcon,
   Copy,
-  Check,
   Layers
 } from "lucide-react";
 import { Block, BentoPage } from "../types";
@@ -27,6 +26,7 @@ import BlockEditor from "../components/BlockEditor";
 import ProfileEditor from "../components/ProfileEditor";
 import ThemeEditor from "../components/ThemeEditor";
 import PageManager from "../components/PageManager";
+import ShareModal from "../components/ShareModal";
 import W3ntoLogo from "../components/W3ntoLogo";
 import { socialPlatforms } from "../utils/socialPlatforms";
 import { toast } from "sonner";
@@ -40,8 +40,8 @@ export default function Dashboard() {
   const [editingBlock, setEditingBlock] = useState<Block | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [copiedUrl, setCopiedUrl] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
   // Load profile from Firestore
@@ -197,9 +197,7 @@ export default function Dashboard() {
 
   const handleSharePage = (page: BentoPage) => {
     const url = `${window.location.origin}/${profile?.username}/${page.slug}`;
-    navigator.clipboard.writeText(url);
-    setCopiedUrl(true);
-    setTimeout(() => setCopiedUrl(false), 2000);
+    setShareUrl(url);
   };
 
   const handleAddBlock = (type: Block["type"]) => {
@@ -526,16 +524,11 @@ export default function Dashboard() {
                     <span className="text-sm text-gray-500 ml-3">/{currentPage.slug}</span>
                   </h2>
                   <button
-                    onClick={() => {
-                      const url = `${window.location.origin}/${profile.username}/${currentPage.slug}`;
-                      navigator.clipboard.writeText(url);
-                      setCopiedUrl(true);
-                      setTimeout(() => setCopiedUrl(false), 2000);
-                    }}
+                    onClick={() => handleSharePage(currentPage)}
                     className="px-3 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2"
                   >
-                    {copiedUrl ? <Check className="size-4 text-green-600" /> : <Copy className="size-4" />}
-                    {copiedUrl ? "Copied!" : "Copy Link"}
+                    <Copy className="size-4" />
+                    Share
                   </button>
                 </div>
 
@@ -659,6 +652,11 @@ export default function Dashboard() {
           onSave={handleUpdateBlock}
           onClose={() => setEditingBlock(null)}
         />
+      )}
+
+      {/* Share Modal */}
+      {shareUrl && (
+        <ShareModal url={shareUrl} onClose={() => setShareUrl(null)} />
       )}
     </div>
   );

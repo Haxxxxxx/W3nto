@@ -4,6 +4,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.w3nto.app.data.model.BentoPage
 import com.w3nto.app.data.model.Block
+import com.w3nto.app.data.model.FavoritePage
 import com.w3nto.app.data.model.Profile
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
@@ -216,6 +217,52 @@ class FirestoreDataSource @Inject constructor(
             .document(userId)
             .collection("favorites")
             .document(username)
+            .get()
+            .await()
+        return doc.exists()
+    }
+
+    // ── Page-Level Favorites ──
+
+    suspend fun getPageFavorites(userId: String): List<FavoritePage> {
+        val snapshot = firestore.collection("users")
+            .document(userId)
+            .collection("favorites")
+            .orderBy("savedAt", Query.Direction.DESCENDING)
+            .get()
+            .await()
+
+        return snapshot.documents.mapNotNull { doc ->
+            doc.data?.let { FavoritePage.fromMap(it) }
+        }
+    }
+
+    suspend fun addPageFavorite(userId: String, favorite: FavoritePage) {
+        val docId = "${favorite.username}:::${favorite.pageId}"
+        firestore.collection("users")
+            .document(userId)
+            .collection("favorites")
+            .document(docId)
+            .set(favorite.toMap())
+            .await()
+    }
+
+    suspend fun removePageFavorite(userId: String, username: String, pageId: String) {
+        val docId = "${username}:::${pageId}"
+        firestore.collection("users")
+            .document(userId)
+            .collection("favorites")
+            .document(docId)
+            .delete()
+            .await()
+    }
+
+    suspend fun isPageFavorited(userId: String, username: String, pageId: String): Boolean {
+        val docId = "${username}:::${pageId}"
+        val doc = firestore.collection("users")
+            .document(userId)
+            .collection("favorites")
+            .document(docId)
             .get()
             .await()
         return doc.exists()

@@ -28,7 +28,7 @@ fun ChartBlock(block: Block, textColor: Color) {
             tint = textColor,
             modifier = Modifier.size(32.dp)
         )
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(6.dp))
         Text(
             text = block.title.ifEmpty { "Price Chart" },
             color = textColor,
@@ -39,7 +39,14 @@ fun ChartBlock(block: Block, textColor: Color) {
         )
         if (!block.tokenAddress.isNullOrEmpty()) {
             Text(
-                text = block.chainId ?: "Solana",
+                text = block.tokenAddress.take(6) + "..." + block.tokenAddress.takeLast(4),
+                color = textColor.copy(alpha = 0.5f),
+                fontSize = 10.sp
+            )
+        }
+        if (!block.chainId.isNullOrEmpty()) {
+            Text(
+                text = block.chainId,
                 color = textColor.copy(alpha = 0.5f),
                 fontSize = 10.sp
             )
