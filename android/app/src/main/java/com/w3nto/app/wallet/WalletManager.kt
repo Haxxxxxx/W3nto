@@ -200,9 +200,10 @@ class WalletManager @Inject constructor(
                 .call(data)
                 .await()
 
-            @Suppress("UNCHECKED_CAST")
-            val resultData = result.getData() as Map<String, Any>
-            val token = resultData["token"] as String
+            val resultData = result.getData() as? Map<*, *>
+                ?: throw IllegalStateException("Invalid response from verifyWalletSignature")
+            val token = resultData["token"] as? String
+                ?: throw IllegalStateException("Missing token in auth response")
 
             authRepository.signInWithCustomToken(token).getOrThrow()
 

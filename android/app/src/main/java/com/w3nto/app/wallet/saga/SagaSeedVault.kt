@@ -63,7 +63,8 @@ class SagaSeedVault @Inject constructor(
                     arrayOf(message),
                     arrayOf(authResult.publicKey)
                 )
-                signResult.signedPayloads[0]
+                signResult.signedPayloads.firstOrNull()
+                    ?: throw IllegalStateException("Wallet did not return a signed payload")
             }
 
         val result = mwa.transact(sender, null, block)

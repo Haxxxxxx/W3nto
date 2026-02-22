@@ -81,8 +81,10 @@ class MainActivity : ComponentActivity() {
                 // HTTPS deep links: w3nto.app/{username} or w3nto.app/{username}/{pageSlug}
                 val pathSegments = uri.pathSegments ?: return
                 if (pathSegments.isEmpty()) return
-                val username = pathSegments[0]
-                val pageSlug = pathSegments.getOrNull(1)
+                val username = pathSegments[0].lowercase().take(30)
+                val pageSlug = pathSegments.getOrNull(1)?.lowercase()?.take(50)
+                // Only proceed if username has valid format
+                if (!username.matches(Regex("^[a-z0-9_]{1,30}$"))) return
                 val route = if (pageSlug != null) {
                     "profile/$username?page=$pageSlug"
                 } else {

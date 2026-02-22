@@ -1,3 +1,4 @@
+import type { ComponentType } from "react";
 import { SocialPlatform } from "../types";
 import {
   Twitter,
@@ -18,7 +19,7 @@ import {
 
 export interface SocialPlatformInfo {
   name: string;
-  icon: React.ComponentType<any>;
+  icon: ComponentType<{ className?: string }>;
   color: string;
   urlPrefix: string;
 }

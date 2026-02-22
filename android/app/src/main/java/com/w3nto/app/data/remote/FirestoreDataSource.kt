@@ -63,7 +63,9 @@ class FirestoreDataSource @Inject constructor(
             .orderBy("createdAt", Query.Direction.ASCENDING)
             .get()
             .await()
-        return snapshot.documents.map { BentoPage.fromMap(it.id, it.data!!) }
+        return snapshot.documents.mapNotNull { doc ->
+            doc.data?.let { BentoPage.fromMap(doc.id, it) }
+        }
     }
 
     suspend fun getPage(username: String, pageId: String): BentoPage? {
@@ -112,7 +114,9 @@ class FirestoreDataSource @Inject constructor(
             .orderBy("position", Query.Direction.ASCENDING)
             .get()
             .await()
-        return snapshot.documents.map { Block.fromMap(it.id, it.data!!) }
+        return snapshot.documents.mapNotNull { doc ->
+            doc.data?.let { Block.fromMap(doc.id, it) }
+        }
     }
 
     suspend fun setBlock(username: String, pageId: String, block: Block): String {
@@ -172,7 +176,7 @@ class FirestoreDataSource @Inject constructor(
     suspend fun searchProfiles(searchQuery: String): List<Profile> {
         val end = searchQuery + "\uf8ff"
         val snapshot = firestore.collection("profiles")
-            .orderBy("username")
+            .orderBy(com.google.firebase.firestore.FieldPath.documentId())
             .startAt(searchQuery.lowercase())
             .endAt(end.lowercase())
             .limit(20)
@@ -181,53 +185,6 @@ class FirestoreDataSource @Inject constructor(
         return snapshot.documents.mapNotNull { doc ->
             doc.data?.let { Profile.fromMap(doc.id, it) }
         }
-    }
-
-    // ── Favorites ──
-
-    suspend fun getFavorites(userId: String): List<Profile> {
-        val snapshot = firestore.collection("users")
-            .document(userId)
-            .collection("favorites")
-            .orderBy("savedAt", Query.Direction.DESCENDING)
-            .get()
-            .await()
-
-        return snapshot.documents.mapNotNull { doc ->
-            val username = doc.getString("username") ?: return@mapNotNull null
-            getProfile(username)
-        }
-    }
-
-    suspend fun addFavorite(userId: String, username: String) {
-        firestore.collection("users")
-            .document(userId)
-            .collection("favorites")
-            .document(username)
-            .set(mapOf(
-                "username" to username,
-                "savedAt" to com.google.firebase.Timestamp.now()
-            ))
-            .await()
-    }
-
-    suspend fun removeFavorite(userId: String, username: String) {
-        firestore.collection("users")
-            .document(userId)
-            .collection("favorites")
-            .document(username)
-            .delete()
-            .await()
-    }
-
-    suspend fun isFavorited(userId: String, username: String): Boolean {
-        val doc = firestore.collection("users")
-            .document(userId)
-            .collection("favorites")
-            .document(username)
-            .get()
-            .await()
-        return doc.exists()
     }
 
     // ── Page-Level Favorites ──

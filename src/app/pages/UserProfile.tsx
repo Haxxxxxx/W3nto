@@ -69,7 +69,7 @@ export default function UserProfile() {
     );
   }
 
-  if (notFound || !profile || !currentPage) {
+  if (notFound || !profile) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center max-w-md">
@@ -87,6 +87,17 @@ export default function UserProfile() {
             <ArrowLeft className="size-4" />
             Go Home
           </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!currentPage) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-2xl font-bold mb-2">{profile.displayName || profile.username}</p>
+          <p className="text-gray-500">This profile has no pages yet.</p>
         </div>
       </div>
     );

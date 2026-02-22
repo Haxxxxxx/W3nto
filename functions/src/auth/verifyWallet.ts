@@ -44,6 +44,21 @@ export const verifyWalletSignature = functions.https.onCall(
       );
     }
 
+    // Validate Solana public key length (32 bytes)
+    if (publicKeyBytes.length !== 32) {
+      throw new functions.https.HttpsError(
+        "invalid-argument",
+        "Invalid public key: must be a 32-byte Solana address"
+      );
+    }
+    // Validate ed25519 signature length (64 bytes)
+    if (signatureBytes.length !== 64) {
+      throw new functions.https.HttpsError(
+        "invalid-argument",
+        "Invalid signature: must be 64 bytes"
+      );
+    }
+
     // Verify the ed25519 signature
     const messageBytes = new TextEncoder().encode(message);
     const isValid = nacl.sign.detached.verify(

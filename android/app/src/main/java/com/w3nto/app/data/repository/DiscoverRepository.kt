@@ -2,6 +2,7 @@ package com.w3nto.app.data.repository
 
 import com.w3nto.app.data.model.Profile
 import com.w3nto.app.data.remote.FirestoreDataSource
+import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -9,7 +10,7 @@ import javax.inject.Singleton
 class DiscoverRepository @Inject constructor(
     private val firestoreDataSource: FirestoreDataSource
 ) {
-    @Volatile
+    private val paginationMutex = kotlinx.coroutines.sync.Mutex()
     private var lastDocumentId: String? = null
 
     fun resetPagination() {
@@ -17,14 +18,16 @@ class DiscoverRepository @Inject constructor(
     }
 
     suspend fun getProfiles(pageSize: Int = 20): Result<List<Profile>> = runCatching {
-        val profiles = firestoreDataSource.getDiscoverProfiles(
-            pageSize = pageSize,
-            lastDocumentId = lastDocumentId
-        )
-        if (profiles.isNotEmpty()) {
-            lastDocumentId = profiles.last().username
+        paginationMutex.withLock {
+            val profiles = firestoreDataSource.getDiscoverProfiles(
+                pageSize = pageSize,
+                lastDocumentId = lastDocumentId
+            )
+            if (profiles.isNotEmpty()) {
+                lastDocumentId = profiles.last().username
+            }
+            profiles
         }
-        profiles
     }
 
     suspend fun searchProfiles(query: String): Result<List<Profile>> = runCatching {

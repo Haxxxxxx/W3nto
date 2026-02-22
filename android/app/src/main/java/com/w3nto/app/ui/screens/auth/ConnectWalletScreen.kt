@@ -17,7 +17,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.solana.mobilewalletadapter.clientlib.ActivityResultSender
-import com.w3nto.app.data.repository.AuthRepository
 import com.w3nto.app.ui.theme.DarkBackground
 import com.w3nto.app.ui.theme.DarkSurfaceVariant
 import com.w3nto.app.ui.theme.Error
@@ -29,22 +28,12 @@ import kotlinx.coroutines.launch
 @Composable
 fun ConnectWalletScreen(
     walletManager: WalletManager,
-    authRepository: AuthRepository,
     activityResultSender: ActivityResultSender,
     onConnected: () -> Unit
 ) {
     val isConnecting by walletManager.isConnecting.collectAsState()
     val error by walletManager.error.collectAsState()
     val scope = rememberCoroutineScope()
-
-    // Observe Firebase auth state for navigation
-    val firebaseUser by authRepository.authStateFlow().collectAsState(initial = authRepository.currentUser)
-
-    LaunchedEffect(firebaseUser) {
-        if (firebaseUser != null) {
-            onConnected()
-        }
-    }
 
     Box(
         modifier = Modifier

@@ -46,6 +46,7 @@ export default function Dashboard() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const saveVersionRef = useRef(0);
 
   // Load profile from Firestore
   useEffect(() => {
@@ -107,7 +108,9 @@ export default function Dashboard() {
   // Debounced auto-save
   const debouncedSave = useCallback((profileToSave: Profile) => {
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    const version = ++saveVersionRef.current;
     saveTimeoutRef.current = setTimeout(async () => {
+      if (version !== saveVersionRef.current) return; // superseded by newer save
       try {
         await saveProfile(profileToSave);
       } catch (err) {
@@ -115,6 +118,13 @@ export default function Dashboard() {
         toast.error("Auto-save failed");
       }
     }, 2000);
+  }, []);
+
+  // Cleanup: clear pending debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    };
   }, []);
 
   const currentPage = profile?.pages.find((p) => p.id === currentPageId);
@@ -145,7 +155,7 @@ export default function Dashboard() {
     const newPage: BentoPage = {
       id: crypto.randomUUID(),
       name: `Page ${profile.pages.length + 1}`,
-      slug: `page-${profile.pages.length + 1}`,
+      slug: `page-${Date.now()}`,
       blocks: [],
       theme: profile.theme,
       isFavorite: false,
@@ -274,7 +284,13 @@ export default function Dashboard() {
       ...profile,
       pages: profile.pages.map((p) =>
         p.id === currentPageId
-          ? { ...p, blocks: p.blocks.filter((b) => b.id !== blockId), updatedAt: Date.now() }
+          ? {
+              ...p,
+              blocks: p.blocks
+                .filter((b) => b.id !== blockId)
+                .map((b, idx) => ({ ...b, position: idx })),
+              updatedAt: Date.now(),
+            }
           : p
       ),
     });

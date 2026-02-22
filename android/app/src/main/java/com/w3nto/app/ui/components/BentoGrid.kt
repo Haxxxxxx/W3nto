@@ -46,6 +46,9 @@ fun BentoGrid(
         }
     ) { measurables, constraints ->
         val availableWidth = constraints.maxWidth
+        if (availableWidth <= 0) {
+            return@Layout layout(0, 0) {}
+        }
         val colWidth = (availableWidth - (GRID_COLUMNS - 1) * gapPx) / GRID_COLUMNS
 
         // Track occupied cells: grid[row][col] = true if occupied

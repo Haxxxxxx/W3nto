@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode, useMemo } from "react";
 import { ConnectionProvider, WalletProvider as SolanaWalletProvider, useWallet as useSolanaWallet, Wallet } from "@solana/wallet-adapter-react";
+import { PhantomWalletAdapter, SolflareWalletAdapter } from "@solana/wallet-adapter-wallets";
 import { clusterApiUrl } from "@solana/web3.js";
 import { signInWithCustomToken, onAuthStateChanged, signOut, User } from "firebase/auth";
 import { httpsCallable } from "firebase/functions";
@@ -164,7 +165,7 @@ function WalletAuthBridge({ children }: { children: ReactNode }) {
   const disconnect = useCallback(() => {
     authedWalletRef.current = null;
     walletDisconnect();
-    signOut(auth);
+    signOut(auth).catch((err) => console.error("Sign out error:", err));
     setAuthError(null);
   }, [walletDisconnect]);
 
@@ -196,7 +197,10 @@ function WalletAuthBridge({ children }: { children: ReactNode }) {
 
 export function WalletProvider({ children }: { children: ReactNode }) {
   const endpoint = useMemo(() => clusterApiUrl("devnet"), []);
-  const walletAdapters = useMemo(() => [], []);
+  const walletAdapters = useMemo(
+    () => [new PhantomWalletAdapter(), new SolflareWalletAdapter()],
+    []
+  );
 
   return (
     <ConnectionProvider endpoint={endpoint}>

@@ -61,11 +61,17 @@ fun NavGraph(
         }
     }
 
-    // Handle deep link navigation
+    // Handle deep link navigation — delay one frame to ensure NavHost graph is initialized
     LaunchedEffect(deepLinkRoute) {
         val route = deepLinkRoute ?: return@LaunchedEffect
-        navController.navigate(route) {
-            launchSingleTop = true
+        // Wait for NavHost to complete its first composition
+        kotlinx.coroutines.delay(100)
+        try {
+            navController.navigate(route) {
+                launchSingleTop = true
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("NavGraph", "Deep link navigation failed: ${e.message}")
         }
         onDeepLinkConsumed()
     }
@@ -102,7 +108,6 @@ fun NavGraph(
             composable(Screen.ConnectWallet.route) {
                 ConnectWalletScreen(
                     walletManager = walletManager,
-                    authRepository = authRepository,
                     activityResultSender = activityResultSender,
                     onConnected = {
                         navController.navigate(Screen.Discover.route) {

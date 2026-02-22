@@ -121,7 +121,10 @@ class ProfileViewModel @Inject constructor(
     }
 
     fun toggleFavorite() {
-        val userId = auth.currentUser?.uid ?: return
+        val userId = auth.currentUser?.uid ?: run {
+            _uiState.value = _uiState.value.copy(error = "Connect your wallet to save favorites")
+            return
+        }
         val currentPage = _uiState.value.currentPage ?: return
         val profile = _uiState.value.profile ?: return
         val currentlyFavorited = _uiState.value.isFavorited

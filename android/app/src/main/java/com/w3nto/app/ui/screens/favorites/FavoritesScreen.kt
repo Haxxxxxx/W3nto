@@ -33,45 +33,45 @@ fun FavoritesScreen(
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) }
-    ) { innerPadding ->
-        Box(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
-            when {
-                uiState.isLoading -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
-                    }
+    Box(modifier = Modifier.fillMaxSize()) {
+        when {
+            uiState.isLoading -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
                 }
+            }
 
-                uiState.requiresAuth -> {
-                    AuthRequiredState()
-                }
+            uiState.requiresAuth -> {
+                AuthRequiredState()
+            }
 
-                uiState.favorites.isEmpty() -> {
-                    EmptyFavoritesState()
-                }
+            uiState.favorites.isEmpty() -> {
+                EmptyFavoritesState()
+            }
 
-                else -> {
-                    LazyColumn(
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        items(
-                            items = uiState.favorites,
-                            key = { "${it.username}:::${it.pageId}" }
-                        ) { fav ->
-                            SwipeToDeleteFavoriteItem(
-                                favorite = fav,
-                                onDelete = { viewModel.removeFavorite(fav.username, fav.pageId) },
-                                onClick = { onPageClick(fav.username, fav.pageSlug) }
-                            )
-                        }
+            else -> {
+                LazyColumn(
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    items(
+                        items = uiState.favorites,
+                        key = { "${it.username}:::${it.pageId}" }
+                    ) { fav ->
+                        SwipeToDeleteFavoriteItem(
+                            favorite = fav,
+                            onDelete = { viewModel.removeFavorite(fav.username, fav.pageId) },
+                            onClick = { onPageClick(fav.username, fav.pageSlug) }
+                        )
                     }
                 }
             }
         }
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter)
+        )
     }
 
     uiState.error?.let { errorMessage ->

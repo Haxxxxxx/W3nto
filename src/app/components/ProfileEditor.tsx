@@ -75,7 +75,12 @@ export default function ProfileEditor({ profile, onUpdate }: ProfileEditorProps)
             <input
               type="url"
               value={profile.avatar}
-              onChange={(e) => onUpdate({ ...profile, avatar: e.target.value })}
+              onChange={(e) => {
+                const val = e.target.value;
+                // Only allow http/https URLs or empty string
+                if (val && !val.startsWith('https://') && !val.startsWith('http://')) return;
+                onUpdate({ ...profile, avatar: val });
+              }}
               className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 mt-2"
               placeholder="https://example.com/avatar.jpg"
             />
