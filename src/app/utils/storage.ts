@@ -119,7 +119,7 @@ export function createDefaultProfile(walletAddress: string): Profile {
   };
 
   const defaultPage: BentoPage = {
-    id: Date.now().toString(),
+    id: crypto.randomUUID(),
     name: "Main",
     slug: "main",
     isFavorite: true,
@@ -128,7 +128,7 @@ export function createDefaultProfile(walletAddress: string): Profile {
     theme: defaultTheme,
     blocks: [
       {
-        id: "1",
+        id: crypto.randomUUID(),
         type: "link",
         title: "My Website",
         content: "Check out my portfolio",
@@ -142,7 +142,7 @@ export function createDefaultProfile(walletAddress: string): Profile {
         position: 0,
       },
       {
-        id: "2",
+        id: crypto.randomUUID(),
         type: "social",
         title: "Twitter",
         content: "@username",
@@ -157,7 +157,7 @@ export function createDefaultProfile(walletAddress: string): Profile {
         position: 1,
       },
       {
-        id: "3",
+        id: crypto.randomUUID(),
         type: "social",
         title: "GitHub",
         content: "@username",

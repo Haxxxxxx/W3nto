@@ -152,7 +152,7 @@ export default function Landing() {
             </div>
             <h3 className="text-xl mb-3">Wallet Connection</h3>
             <p className="text-gray-600">
-              Connect with MetaMask, WalletConnect, and more. Your Web3 identity is your profile.
+              Connect with Phantom, Solflare, and any Solana wallet. Your Web3 identity is your profile.
             </p>
           </div>
           <div className="p-8 bg-gray-50 rounded-2xl">

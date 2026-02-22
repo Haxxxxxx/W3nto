@@ -9,6 +9,7 @@ import javax.inject.Singleton
 class DiscoverRepository @Inject constructor(
     private val firestoreDataSource: FirestoreDataSource
 ) {
+    @Volatile
     private var lastDocumentId: String? = null
 
     fun resetPagination() {

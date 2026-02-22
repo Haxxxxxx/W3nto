@@ -8,6 +8,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
@@ -24,10 +25,10 @@ fun PageSelector(
     theme: Theme = Theme(),
     modifier: Modifier = Modifier
 ) {
-    val textColor = parseColor(theme.textColor)
-    val cardBg = parseColor(theme.cardBackground)
-    val buttonBg = parseColor(theme.buttonBackground)
-    val buttonText = parseColor(theme.buttonText)
+    val textColor = remember(theme.textColor) { parseColor(theme.textColor) }
+    val cardBg = remember(theme.cardBackground) { parseColor(theme.cardBackground) }
+    val buttonBg = remember(theme.buttonBackground) { parseColor(theme.buttonBackground) }
+    val buttonText = remember(theme.buttonText) { parseColor(theme.buttonText) }
     val buttonRadius = if (theme.buttonStyle == "rounded") 20.dp else theme.borderRadius.dp
 
     Row(

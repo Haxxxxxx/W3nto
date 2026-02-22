@@ -61,7 +61,13 @@ export const verifyWalletSignature = functions.https.onCall(
 
     // Verify message freshness (within 5 minutes)
     const timestampMatch = message.match(/Timestamp:\s*(\d+)/);
-    if (timestampMatch) {
+    if (!timestampMatch) {
+      throw new functions.https.HttpsError(
+        "invalid-argument",
+        "Message must include a timestamp"
+      );
+    }
+    {
       const timestamp = parseInt(timestampMatch[1], 10);
       const now = Date.now();
       const fiveMinutes = 5 * 60 * 1000;

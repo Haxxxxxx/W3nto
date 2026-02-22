@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router";
 import { Profile } from "../types";
 import { useWallet } from "../contexts/WalletContext";
 import { createDefaultProfile, saveProfile, getProfile, logout } from "../utils/storage";
+import * as firestoreService from "../services/firestore";
 import {
   Grid3x3,
   User,
@@ -19,7 +20,9 @@ import {
   TrendingUp,
   Image as NFTIcon,
   Copy,
-  Layers
+  Layers,
+  PlayCircle,
+  Music
 } from "lucide-react";
 import { Block, BentoPage } from "../types";
 import BlockEditor from "../components/BlockEditor";
@@ -70,7 +73,7 @@ export default function Dashboard() {
         // Migrate old profiles without pages
         if (!userProfile.pages || userProfile.pages.length === 0) {
           const defaultPage: BentoPage = {
-            id: Date.now().toString(),
+            id: crypto.randomUUID(),
             name: "Main",
             slug: "main",
             blocks: (userProfile as any).blocks || [],
@@ -140,7 +143,7 @@ export default function Dashboard() {
   const handleCreatePage = () => {
     if (!profile) return;
     const newPage: BentoPage = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       name: `Page ${profile.pages.length + 1}`,
       slug: `page-${profile.pages.length + 1}`,
       blocks: [],
@@ -155,6 +158,9 @@ export default function Dashboard() {
 
   const handleDeletePage = (pageId: string) => {
     if (!profile) return;
+    // Delete from Firestore immediately (cascades to blocks)
+    firestoreService.deletePage(profile.username, pageId).catch(console.error);
+    // Update local state
     const updatedPages = profile.pages.filter((p) => p.id !== pageId);
     updateProfile({
       ...profile,
@@ -203,7 +209,7 @@ export default function Dashboard() {
   const handleAddBlock = (type: Block["type"]) => {
     if (!profile || !currentPage) return;
     const newBlock: Block = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       type,
       title: `New ${type}`,
       content: "",
@@ -261,6 +267,9 @@ export default function Dashboard() {
 
   const handleDeleteBlock = (blockId: string) => {
     if (!profile) return;
+    // Delete from Firestore immediately
+    firestoreService.deleteBlock(profile.username, currentPageId, blockId).catch(console.error);
+    // Update local state
     updateProfile({
       ...profile,
       pages: profile.pages.map((p) =>
@@ -493,6 +502,20 @@ export default function Dashboard() {
                     <TrendingUp className="size-5" />
                     <span className="text-xs">Chart</span>
                   </button>
+                  <button
+                    onClick={() => handleAddBlock("video")}
+                    className="p-3 border border-gray-200 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-colors flex flex-col items-center gap-2"
+                  >
+                    <PlayCircle className="size-5" />
+                    <span className="text-xs">Video</span>
+                  </button>
+                  <button
+                    onClick={() => handleAddBlock("music")}
+                    className="p-3 border border-gray-200 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-colors flex flex-col items-center gap-2"
+                  >
+                    <Music className="size-5" />
+                    <span className="text-xs">Music</span>
+                  </button>
                 </div>
               </div>
             )}
@@ -539,7 +562,7 @@ export default function Dashboard() {
                     <p className="text-sm text-gray-500">Add your first block from the sidebar!</p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-4 gap-4 auto-rows-[120px]">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 auto-rows-[100px] md:auto-rows-[120px]">
                     {currentPage.blocks.map((block) => (
                       <div
                         key={block.id}

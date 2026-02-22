@@ -5,9 +5,7 @@ import {
   setDoc,
   deleteDoc,
   collection,
-  onSnapshot,
   serverTimestamp,
-  Unsubscribe,
 } from "firebase/firestore";
 import { db, auth } from "../config/firebase";
 import type { Profile, BentoPage, Block } from "../types";
@@ -237,22 +235,6 @@ export async function deleteBlock(
   await deleteDoc(
     doc(db, "profiles", username, "pages", pageId, "blocks", blockId)
   );
-}
-
-// --- Real-time listener ---
-
-export function onProfileSnapshot(
-  username: string,
-  callback: (profile: Profile | null) => void
-): Unsubscribe {
-  return onSnapshot(doc(db, "profiles", username), async (snap) => {
-    if (!snap.exists()) {
-      callback(null);
-      return;
-    }
-    const profile = await getProfile(username);
-    callback(profile);
-  });
 }
 
 // --- Helpers ---

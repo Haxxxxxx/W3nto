@@ -46,7 +46,7 @@ LINK, SOCIAL, TEXT, IMAGE, VIDEO, NFT, TOKEN, CHART, MUSIC
 
 ## Auth Flow
 1. Wallet connects (Phantom deep link or Saga MWA)
-2. App generates message: `"Sign in to W3nto with wallet: {publicKey}\nTimestamp: {ms}"`
+2. App generates message: `"Sign in to W3nto\nWallet: {publicKey}\nTimestamp: {ms}"`
 3. Wallet signs the message
 4. App calls `verifyWalletSignature` Cloud Function with publicKey + signature + message
 5. Cloud Function verifies ed25519 → creates Firebase custom token → returns it

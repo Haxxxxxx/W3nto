@@ -51,10 +51,10 @@ fun PublicProfileScreen(
 
     // Use page theme if available, otherwise profile theme, otherwise default
     val activeTheme = uiState.currentPage?.theme ?: uiState.profile?.theme ?: Theme()
-    val bgColor = parseColor(activeTheme.backgroundColor)
-    val textColor = parseColor(activeTheme.textColor)
-    val primaryColor = parseColor(activeTheme.primaryColor)
-    val cardBg = parseColor(activeTheme.cardBackground)
+    val bgColor = remember(activeTheme.backgroundColor) { parseColor(activeTheme.backgroundColor) }
+    val textColor = remember(activeTheme.textColor) { parseColor(activeTheme.textColor) }
+    val primaryColor = remember(activeTheme.primaryColor) { parseColor(activeTheme.primaryColor) }
+    val cardBg = remember(activeTheme.cardBackground) { parseColor(activeTheme.cardBackground) }
 
     Scaffold(
         topBar = {

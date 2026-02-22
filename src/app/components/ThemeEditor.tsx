@@ -17,7 +17,7 @@ const fonts = [
 ];
 
 export default function ThemeEditor({ profile, onUpdate }: ThemeEditorProps) {
-  const updateTheme = (key: keyof typeof profile.theme, value: any) => {
+  const updateTheme = (key: keyof typeof profile.theme, value: string | number) => {
     onUpdate({
       ...profile,
       theme: {

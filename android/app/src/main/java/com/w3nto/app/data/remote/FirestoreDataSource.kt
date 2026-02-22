@@ -40,9 +40,17 @@ class FirestoreDataSource @Inject constructor(
     }
 
     suspend fun setWalletMapping(walletAddress: String, username: String) {
+        val uid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
         firestore.collection("wallets")
             .document(walletAddress)
-            .set(mapOf("username" to username))
+            .set(
+                mapOf(
+                    "username" to username,
+                    "uid" to uid,
+                    "updatedAt" to com.google.firebase.Timestamp.now()
+                ),
+                com.google.firebase.firestore.SetOptions.merge()
+            )
             .await()
     }
 

@@ -58,10 +58,10 @@ class SagaSeedVault @Inject constructor(
         mwa.rpcCluster = RpcCluster.Devnet
 
         val block: suspend (AdapterOperations, AuthorizationResult) -> ByteArray =
-            { ops, _ ->
+            { ops, authResult ->
                 val signResult = ops.signMessages(
                     arrayOf(message),
-                    arrayOf(ByteArray(0))
+                    arrayOf(authResult.publicKey)
                 )
                 signResult.signedPayloads[0]
             }

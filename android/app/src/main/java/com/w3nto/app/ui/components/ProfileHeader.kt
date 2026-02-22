@@ -6,6 +6,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -29,8 +30,8 @@ fun ProfileHeader(
     theme: Theme = Theme(),
     modifier: Modifier = Modifier
 ) {
-    val textColor = parseColor(theme.textColor)
-    val cardBg = parseColor(theme.cardBackground)
+    val textColor = remember(theme.textColor) { parseColor(theme.textColor) }
+    val cardBg = remember(theme.cardBackground) { parseColor(theme.cardBackground) }
 
     Column(
         modifier = modifier
@@ -59,8 +60,8 @@ fun ProfileHeader(
                     .background(
                         Brush.linearGradient(
                             colors = listOf(
-                                parseColor(theme.primaryColor),
-                                parseColor(theme.secondaryColor)
+                                remember(theme.primaryColor) { parseColor(theme.primaryColor) },
+                                remember(theme.secondaryColor) { parseColor(theme.secondaryColor) }
                             )
                         )
                     ),
@@ -70,7 +71,7 @@ fun ProfileHeader(
                     text = profile.displayName.firstOrNull()?.toString() ?: "?",
                     fontSize = 36.sp,
                     fontWeight = FontWeight.Bold,
-                    color = parseColor(theme.buttonText)
+                    color = remember(theme.buttonText) { parseColor(theme.buttonText) }
                 )
             }
         }

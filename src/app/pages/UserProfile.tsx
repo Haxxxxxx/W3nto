@@ -94,7 +94,14 @@ export default function UserProfile() {
 
   const handleBlockClick = (block: Block) => {
     if (block.url) {
-      window.open(block.url, "_blank", "noopener,noreferrer");
+      try {
+        const parsed = new URL(block.url);
+        if (parsed.protocol === "https:" || parsed.protocol === "http:") {
+          window.open(block.url, "_blank", "noopener,noreferrer");
+        }
+      } catch {
+        // Invalid URL — ignore
+      }
     }
   };
 
@@ -311,7 +318,7 @@ export default function UserProfile() {
             <p className="opacity-60">No blocks added yet</p>
           </div>
         ) : (
-          <div className="grid grid-cols-4 gap-4 auto-rows-[120px]">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 auto-rows-[100px] md:auto-rows-[120px]">
             {currentPage.blocks.map((block) => (
               <div
                 key={block.id}
