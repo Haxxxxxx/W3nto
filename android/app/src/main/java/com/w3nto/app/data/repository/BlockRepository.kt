@@ -12,12 +12,4 @@ class BlockRepository @Inject constructor(
     suspend fun getBlocks(username: String, pageId: String): Result<List<Block>> = runCatching {
         firestoreDataSource.getBlocks(username, pageId)
     }
-
-    suspend fun saveBlock(username: String, pageId: String, block: Block): Result<String> = runCatching {
-        firestoreDataSource.setBlock(username, pageId, block)
-    }
-
-    suspend fun deleteBlock(username: String, pageId: String, blockId: String): Result<Unit> = runCatching {
-        firestoreDataSource.deleteBlock(username, pageId, blockId)
-    }
 }

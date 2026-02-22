@@ -1,7 +1,6 @@
 package com.w3nto.app.wallet.phantom
 
 import android.net.Uri
-import android.util.Base64
 import com.goterl.lazysodium.LazySodiumAndroid
 import com.goterl.lazysodium.SodiumAndroid
 import com.goterl.lazysodium.interfaces.Box

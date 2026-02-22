@@ -32,11 +32,6 @@ class AuthRepository @Inject constructor(
         result.user ?: throw IllegalStateException("Auth succeeded but user is null")
     }
 
-    suspend fun signInAnonymously(): Result<FirebaseUser> = runCatching {
-        val result = auth.signInAnonymously().await()
-        result.user ?: throw IllegalStateException("Anonymous auth succeeded but user is null")
-    }
-
     fun signOut() {
         auth.signOut()
     }

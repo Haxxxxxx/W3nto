@@ -28,8 +28,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun ConnectWalletScreen(
     walletManager: WalletManager,
-    activityResultSender: ActivityResultSender,
-    onConnected: () -> Unit
+    activityResultSender: ActivityResultSender
 ) {
     val isConnecting by walletManager.isConnecting.collectAsState()
     val error by walletManager.error.collectAsState()
@@ -72,7 +71,10 @@ fun ConnectWalletScreen(
             if (walletManager.isSolanaDevice) {
                 // Seed Vault — primary on Seeker
                 Button(
-                    onClick = { scope.launch { walletManager.connectSaga(activityResultSender) } },
+                    onClick = {
+                        walletManager.clearError()
+                        scope.launch { walletManager.connectSaga(activityResultSender) }
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(60.dp),
@@ -108,7 +110,10 @@ fun ConnectWalletScreen(
 
                 // Phantom — secondary on Seeker
                 OutlinedButton(
-                    onClick = { walletManager.connectPhantom() },
+                    onClick = {
+                        walletManager.clearError()
+                        walletManager.connectPhantom()
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp),
@@ -135,7 +140,10 @@ fun ConnectWalletScreen(
             } else {
                 // Non-Seeker: Phantom is primary
                 Button(
-                    onClick = { walletManager.connectPhantom() },
+                    onClick = {
+                        walletManager.clearError()
+                        walletManager.connectPhantom()
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp),

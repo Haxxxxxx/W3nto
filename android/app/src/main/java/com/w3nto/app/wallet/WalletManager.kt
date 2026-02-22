@@ -5,7 +5,6 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.util.Log
-import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.functions.FirebaseFunctions
 import com.solana.mobilewalletadapter.clientlib.ActivityResultSender
 import com.w3nto.app.data.repository.AuthRepository
@@ -35,7 +34,6 @@ class WalletManager @Inject constructor(
     private val phantomWallet: PhantomWallet,
     private val sagaSeedVault: SagaSeedVault,
     private val authRepository: AuthRepository,
-    private val firestore: FirebaseFirestore,
     private val functions: FirebaseFunctions
 ) {
     private val _connectedWallet = MutableStateFlow<ConnectedWallet?>(null)

@@ -169,7 +169,10 @@ export default function Dashboard() {
   const handleDeletePage = (pageId: string) => {
     if (!profile) return;
     // Delete from Firestore immediately (cascades to blocks)
-    firestoreService.deletePage(profile.username, pageId).catch(console.error);
+    firestoreService.deletePage(profile.username, pageId).catch((err) => {
+      console.error(err);
+      toast.error("Failed to delete page");
+    });
     // Update local state
     const updatedPages = profile.pages.filter((p) => p.id !== pageId);
     updateProfile({
@@ -277,8 +280,12 @@ export default function Dashboard() {
 
   const handleDeleteBlock = (blockId: string) => {
     if (!profile) return;
+    if (!window.confirm("Delete this block?")) return;
     // Delete from Firestore immediately
-    firestoreService.deleteBlock(profile.username, currentPageId, blockId).catch(console.error);
+    firestoreService.deleteBlock(profile.username, currentPageId, blockId).catch((err) => {
+      console.error(err);
+      toast.error("Failed to delete block");
+    });
     // Update local state
     updateProfile({
       ...profile,

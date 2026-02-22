@@ -109,7 +109,7 @@ class ProfileViewModel @Inject constructor(
     }
 
     fun selectPage(page: BentoPage) {
-        _uiState.value = _uiState.value.copy(currentPage = page, isLoading = true, isFavorited = false)
+        _uiState.value = _uiState.value.copy(currentPage = page, blocks = emptyList(), isFavorited = false)
         viewModelScope.launch {
             val blocksResult = blockRepository.getBlocks(username, page.id)
             _uiState.value = _uiState.value.copy(

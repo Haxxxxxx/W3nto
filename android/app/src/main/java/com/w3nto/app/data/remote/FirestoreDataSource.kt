@@ -1,5 +1,6 @@
 package com.w3nto.app.data.remote
 
+import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.w3nto.app.data.model.BentoPage
@@ -19,39 +20,6 @@ class FirestoreDataSource @Inject constructor(
     suspend fun getProfile(username: String): Profile? {
         val doc = firestore.collection("profiles").document(username).get().await()
         return if (doc.exists()) Profile.fromMap(username, doc.data!!) else null
-    }
-
-    suspend fun setProfile(profile: Profile) {
-        firestore.collection("profiles")
-            .document(profile.username)
-            .set(profile.toMap())
-            .await()
-    }
-
-    suspend fun isUsernameAvailable(username: String): Boolean {
-        val doc = firestore.collection("profiles").document(username).get().await()
-        return !doc.exists()
-    }
-
-    suspend fun getProfileByWallet(walletAddress: String): Profile? {
-        val walletDoc = firestore.collection("wallets").document(walletAddress).get().await()
-        val username = walletDoc.getString("username") ?: return null
-        return getProfile(username)
-    }
-
-    suspend fun setWalletMapping(walletAddress: String, username: String) {
-        val uid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
-        firestore.collection("wallets")
-            .document(walletAddress)
-            .set(
-                mapOf(
-                    "username" to username,
-                    "uid" to uid,
-                    "updatedAt" to com.google.firebase.Timestamp.now()
-                ),
-                com.google.firebase.firestore.SetOptions.merge()
-            )
-            .await()
     }
 
     // ── Pages ──
@@ -78,31 +46,6 @@ class FirestoreDataSource @Inject constructor(
         return if (doc.exists()) BentoPage.fromMap(doc.id, doc.data!!) else null
     }
 
-    suspend fun setPage(username: String, page: BentoPage): String {
-        val ref = if (page.id.isNotEmpty()) {
-            firestore.collection("profiles")
-                .document(username)
-                .collection("pages")
-                .document(page.id)
-        } else {
-            firestore.collection("profiles")
-                .document(username)
-                .collection("pages")
-                .document()
-        }
-        ref.set(page.toMap()).await()
-        return ref.id
-    }
-
-    suspend fun deletePage(username: String, pageId: String) {
-        firestore.collection("profiles")
-            .document(username)
-            .collection("pages")
-            .document(pageId)
-            .delete()
-            .await()
-    }
-
     // ── Blocks ──
 
     suspend fun getBlocks(username: String, pageId: String): List<Block> {
@@ -117,37 +60,6 @@ class FirestoreDataSource @Inject constructor(
         return snapshot.documents.mapNotNull { doc ->
             doc.data?.let { Block.fromMap(doc.id, it) }
         }
-    }
-
-    suspend fun setBlock(username: String, pageId: String, block: Block): String {
-        val ref = if (block.id.isNotEmpty()) {
-            firestore.collection("profiles")
-                .document(username)
-                .collection("pages")
-                .document(pageId)
-                .collection("blocks")
-                .document(block.id)
-        } else {
-            firestore.collection("profiles")
-                .document(username)
-                .collection("pages")
-                .document(pageId)
-                .collection("blocks")
-                .document()
-        }
-        ref.set(block.toMap()).await()
-        return ref.id
-    }
-
-    suspend fun deleteBlock(username: String, pageId: String, blockId: String) {
-        firestore.collection("profiles")
-            .document(username)
-            .collection("pages")
-            .document(pageId)
-            .collection("blocks")
-            .document(blockId)
-            .delete()
-            .await()
     }
 
     // ── Discover ──
@@ -176,7 +88,7 @@ class FirestoreDataSource @Inject constructor(
     suspend fun searchProfiles(searchQuery: String): List<Profile> {
         val end = searchQuery + "\uf8ff"
         val snapshot = firestore.collection("profiles")
-            .orderBy(com.google.firebase.firestore.FieldPath.documentId())
+            .orderBy(FieldPath.documentId())
             .startAt(searchQuery.lowercase())
             .endAt(end.lowercase())
             .limit(20)

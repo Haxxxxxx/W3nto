@@ -61,7 +61,8 @@ fun TextBlock(block: Block, textColor: Color) {
                 text = block.content,
                 color = textColor.copy(alpha = 0.85f),
                 fontSize = 13.sp,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                maxLines = 6
             )
         }
     }

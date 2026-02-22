@@ -208,9 +208,9 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-6 py-8 flex items-center justify-between text-sm text-gray-600">
           <div>© 2026 W3nto. Built for the decentralized web.</div>
           <div className="flex items-center gap-6">
-            <a href="#" className="hover:text-black transition-colors">Twitter</a>
-            <a href="#" className="hover:text-black transition-colors">Discord</a>
-            <a href="#" className="hover:text-black transition-colors">GitHub</a>
+            <span>Twitter</span>
+            <span>Discord</span>
+            <span>GitHub</span>
           </div>
         </div>
       </footer>

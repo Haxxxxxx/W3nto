@@ -16,12 +16,4 @@ class PageRepository @Inject constructor(
     suspend fun getPage(username: String, pageId: String): Result<BentoPage?> = runCatching {
         firestoreDataSource.getPage(username, pageId)
     }
-
-    suspend fun savePage(username: String, page: BentoPage): Result<String> = runCatching {
-        firestoreDataSource.setPage(username, page)
-    }
-
-    suspend fun deletePage(username: String, pageId: String): Result<Unit> = runCatching {
-        firestoreDataSource.deletePage(username, pageId)
-    }
 }

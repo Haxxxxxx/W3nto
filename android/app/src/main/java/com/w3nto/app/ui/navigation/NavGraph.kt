@@ -108,12 +108,7 @@ fun NavGraph(
             composable(Screen.ConnectWallet.route) {
                 ConnectWalletScreen(
                     walletManager = walletManager,
-                    activityResultSender = activityResultSender,
-                    onConnected = {
-                        navController.navigate(Screen.Discover.route) {
-                            popUpTo(Screen.Landing.route) { inclusive = true }
-                        }
-                    }
+                    activityResultSender = activityResultSender
                 )
             }
 
@@ -128,7 +123,9 @@ fun NavGraph(
             composable(Screen.Favorites.route) {
                 FavoritesScreen(
                     onPageClick = { username, pageSlug ->
-                        navController.navigate(Screen.PublicProfile().createRoute(username, pageSlug))
+                        navController.navigate(
+                            Screen.PublicProfile().createRoute(username, pageSlug.takeIf { it.isNotEmpty() })
+                        )
                     }
                 )
             }
