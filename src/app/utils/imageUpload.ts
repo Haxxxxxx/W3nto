@@ -1,27 +1,31 @@
-export function uploadImage(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    if (!file.type.startsWith("image/")) {
-      reject(new Error("File must be an image"));
-      return;
-    }
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { storage, auth } from "../config/firebase";
+import { toast } from "sonner";
 
-    const maxSize = 5 * 1024 * 1024;
-    if (file.size > maxSize) {
-      reject(new Error("Image must be less than 5MB"));
-      return;
-    }
+export async function uploadImage(file: File): Promise<string> {
+  if (!file.type.startsWith("image/")) {
+    throw new Error("File must be an image");
+  }
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const result = e.target?.result as string;
-      resolve(result);
-    };
-    reader.onerror = () => reject(new Error("Failed to read file"));
-    reader.readAsDataURL(file);
-  });
+  const maxSize = 5 * 1024 * 1024;
+  if (file.size > maxSize) {
+    throw new Error("Image must be less than 5MB");
+  }
+
+  const uid = auth.currentUser?.uid;
+  if (!uid) {
+    throw new Error("Must be authenticated to upload images");
+  }
+
+  const ext = file.name.split(".").pop() || "jpg";
+  const filename = `${Date.now()}.${ext}`;
+  const storageRef = ref(storage, `profile_images/${uid}/${filename}`);
+
+  await uploadBytes(storageRef, file, { contentType: file.type });
+  return getDownloadURL(storageRef);
 }
 
-export function createImageInput(onChange: (dataUrl: string) => void): void {
+export function createImageInput(onChange: (url: string) => void): void {
   const input = document.createElement("input");
   input.type = "file";
   input.accept = "image/*";
@@ -29,10 +33,10 @@ export function createImageInput(onChange: (dataUrl: string) => void): void {
     const file = (e.target as HTMLInputElement).files?.[0];
     if (file) {
       try {
-        const dataUrl = await uploadImage(file);
-        onChange(dataUrl);
+        const url = await uploadImage(file);
+        onChange(url);
       } catch (error) {
-        alert(error instanceof Error ? error.message : "Failed to upload image");
+        toast.error(error instanceof Error ? error.message : "Failed to upload image");
       }
     }
   };

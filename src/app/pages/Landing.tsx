@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useNavigate, Link } from "react-router";
 import { useWallet } from "../contexts/WalletContext";
 import { Sparkles, Grid3x3, Palette, Link as LinkIcon, Wallet, ArrowRight, Github, Twitter, Instagram, Youtube } from "lucide-react";
@@ -5,13 +6,22 @@ import W3ntoLogo from "../components/W3ntoLogo";
 
 export default function Landing() {
   const navigate = useNavigate();
-  const { isConnected, connect } = useWallet();
+  const { isConnected, isAuthenticated, isAuthenticating, connect } = useWallet();
+
+  // Navigate to dashboard once authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate("/dashboard");
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleGetStarted = async () => {
-    if (!isConnected) {
-      await connect();
+    if (isAuthenticated) {
+      navigate("/dashboard");
+      return;
     }
-    navigate("/dashboard");
+    await connect();
+    // Navigation will happen via the useEffect above once auth completes
   };
 
   return (
@@ -27,10 +37,20 @@ export default function Landing() {
           </Link>
           <button
             onClick={handleGetStarted}
-            className="px-6 py-2.5 bg-black text-white rounded-full hover:bg-gray-800 transition-colors flex items-center gap-2"
+            disabled={isAuthenticating}
+            className="px-6 py-2.5 bg-black text-white rounded-full hover:bg-gray-800 transition-colors flex items-center gap-2 disabled:opacity-60"
           >
-            <Wallet className="size-4" />
-            {isConnected ? "Dashboard" : "Connect Wallet"}
+            {isAuthenticating ? (
+              <>
+                <div className="size-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Connecting...
+              </>
+            ) : (
+              <>
+                <Wallet className="size-4" />
+                {isAuthenticated ? "Dashboard" : "Connect Wallet"}
+              </>
+            )}
           </button>
         </div>
       </header>
@@ -55,10 +75,20 @@ export default function Landing() {
           </p>
           <button
             onClick={handleGetStarted}
-            className="px-8 py-4 bg-black text-white rounded-full hover:bg-gray-800 transition-colors inline-flex items-center gap-2 text-lg"
+            disabled={isAuthenticating}
+            className="px-8 py-4 bg-black text-white rounded-full hover:bg-gray-800 transition-colors inline-flex items-center gap-2 text-lg disabled:opacity-60"
           >
-            Get Started Free
-            <ArrowRight className="size-5" />
+            {isAuthenticating ? (
+              <>
+                <div className="size-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Connecting...
+              </>
+            ) : (
+              <>
+                Get Started Free
+                <ArrowRight className="size-5" />
+              </>
+            )}
           </button>
 
           {/* Example Bento Preview */}
@@ -155,10 +185,20 @@ export default function Landing() {
           </p>
           <button
             onClick={handleGetStarted}
-            className="px-8 py-4 bg-white text-black rounded-full hover:bg-gray-100 transition-colors inline-flex items-center gap-2 text-lg"
+            disabled={isAuthenticating}
+            className="px-8 py-4 bg-white text-black rounded-full hover:bg-gray-100 transition-colors inline-flex items-center gap-2 text-lg disabled:opacity-60"
           >
-            Connect Your Wallet
-            <ArrowRight className="size-5" />
+            {isAuthenticating ? (
+              <>
+                <div className="size-5 border-2 border-black/30 border-t-black rounded-full animate-spin" />
+                Connecting...
+              </>
+            ) : (
+              <>
+                Connect Your Wallet
+                <ArrowRight className="size-5" />
+              </>
+            )}
           </button>
         </div>
       </section>

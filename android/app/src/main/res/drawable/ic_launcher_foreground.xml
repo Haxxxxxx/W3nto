@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- 7 white rounded rectangles in cross/grid pattern matching W3ntoLogo.tsx -->
+    <!-- The SVG uses a 24x24 viewBox; scale to fit within the 108dp safe zone (center 72dp) -->
+    <!-- Offset by 18dp to center in adaptive icon safe zone -->
+
+    <!-- Row 1: three blocks -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.95"
+        android:pathData="M24,24 L42,24 C43.1,24 44,24.9 44,26 L44,42 C44,43.1 43.1,44 42,44 L26,44 C24.9,44 24,43.1 24,42 L24,26 C24,24.9 24.9,24 26,24 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.85"
+        android:pathData="M45,24 L63,24 C64.1,24 65,24.9 65,26 L65,42 C65,43.1 64.1,44 63,44 L47,44 C45.9,44 45,43.1 45,42 L45,26 C45,24.9 45.9,24 47,24 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.95"
+        android:pathData="M66,24 L84,24 C85.1,24 86,24.9 86,26 L86,42 C86,43.1 85.1,44 84,44 L68,44 C66.9,44 66,43.1 66,42 L66,26 C66,24.9 66.9,24 68,24 Z" />
+
+    <!-- Row 2: left, center, right blocks -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.75"
+        android:pathData="M24,45 L42,45 C43.1,45 44,45.9 44,47 L44,63 C44,64.1 43.1,65 42,65 L26,65 C24.9,65 24,64.1 24,63 L24,47 C24,45.9 24.9,45 26,45 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.95"
+        android:pathData="M45,45 L63,45 C64.1,45 65,45.9 65,47 L65,63 C65,64.1 64.1,65 63,65 L47,65 C45.9,65 45,64.1 45,63 L45,47 C45,45.9 45.9,45 47,45 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.75"
+        android:pathData="M66,45 L84,45 C85.1,45 86,45.9 86,47 L86,63 C86,64.1 85.1,65 84,65 L68,65 C66.9,65 66,64.1 66,63 L66,47 C66,45.9 66.9,45 68,45 Z" />
+
+    <!-- Row 3: center block only (cross pattern) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.85"
+        android:pathData="M45,66 L63,66 C64.1,66 65,66.9 65,68 L65,84 C65,85.1 64.1,86 63,86 L47,86 C45.9,86 45,85.1 45,84 L45,68 C45,66.9 45.9,66 47,66 Z" />
+</vector>

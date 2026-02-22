@@ -1,14 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, Link } from "react-router";
 import { Profile } from "../types";
 import { useWallet } from "../contexts/WalletContext";
-import { createDefaultProfile, saveProfile, getCurrentProfile, logout } from "../utils/storage";
+import { createDefaultProfile, saveProfile, getProfile, logout } from "../utils/storage";
 import {
   Grid3x3,
   User,
   Palette,
   Eye,
-  Plus,
   Save,
   LogOut,
   Edit,
@@ -30,63 +29,116 @@ import ThemeEditor from "../components/ThemeEditor";
 import PageManager from "../components/PageManager";
 import W3ntoLogo from "../components/W3ntoLogo";
 import { socialPlatforms } from "../utils/socialPlatforms";
+import { toast } from "sonner";
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { address, isConnected, disconnect } = useWallet();
+  const { address, isConnected, isAuthenticated, isAuthenticating, authError, disconnect, retryAuth } = useWallet();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [currentPageId, setCurrentPageId] = useState<string>("");
   const [activeTab, setActiveTab] = useState<"blocks" | "pages" | "profile" | "theme">("blocks");
   const [editingBlock, setEditingBlock] = useState<Block | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [copiedUrl, setCopiedUrl] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
+  // Load profile from Firestore
   useEffect(() => {
+    if (isAuthenticating) return;
+
     if (!isConnected || !address) {
       navigate("/");
       return;
     }
 
-    let userProfile = getCurrentProfile(address);
-    if (!userProfile) {
-      userProfile = createDefaultProfile(address);
-      saveProfile(userProfile);
+    if (!isAuthenticated) return;
+
+    let cancelled = false;
+
+    async function loadProfile() {
+      setIsLoading(true);
+      try {
+        let userProfile = await getProfile(address!);
+
+        if (!userProfile) {
+          userProfile = createDefaultProfile(address!);
+          await saveProfile(userProfile);
+        }
+
+        // Migrate old profiles without pages
+        if (!userProfile.pages || userProfile.pages.length === 0) {
+          const defaultPage: BentoPage = {
+            id: Date.now().toString(),
+            name: "Main",
+            slug: "main",
+            blocks: (userProfile as any).blocks || [],
+            theme: userProfile.theme,
+            isFavorite: true,
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+          };
+          userProfile.pages = [defaultPage];
+          userProfile.defaultPageId = defaultPage.id;
+          await saveProfile(userProfile);
+        }
+
+        if (!cancelled) {
+          setProfile(userProfile);
+          setCurrentPageId(userProfile.defaultPageId || userProfile.pages[0]?.id || "");
+        }
+      } catch (err) {
+        console.error("Failed to load profile:", err);
+        setSaveError("Failed to load profile");
+        toast.error("Failed to load profile");
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
     }
 
-    // Migrate old profiles
-    if (!userProfile.pages || userProfile.pages.length === 0) {
-      const defaultPage: BentoPage = {
-        id: Date.now().toString(),
-        name: "Main",
-        slug: "main",
-        blocks: userProfile.blocks || [],
-        theme: userProfile.theme,
-        isFavorite: true,
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-      };
-      userProfile.pages = [defaultPage];
-      userProfile.defaultPageId = defaultPage.id;
-      saveProfile(userProfile);
-    }
+    loadProfile();
+    return () => { cancelled = true; };
+  }, [address, isConnected, isAuthenticated, isAuthenticating, navigate]);
 
-    setProfile(userProfile);
-    setCurrentPageId(userProfile.defaultPageId || userProfile.pages[0]?.id || "");
-  }, [address, isConnected, navigate]);
+  // Debounced auto-save
+  const debouncedSave = useCallback((profileToSave: Profile) => {
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(async () => {
+      try {
+        await saveProfile(profileToSave);
+      } catch (err) {
+        console.error("Auto-save failed:", err);
+        toast.error("Auto-save failed");
+      }
+    }, 2000);
+  }, []);
 
   const currentPage = profile?.pages.find((p) => p.id === currentPageId);
 
-  const handleSave = () => {
-    if (profile) {
-      setIsSaving(true);
-      saveProfile(profile);
-      setTimeout(() => setIsSaving(false), 500);
+  const handleSave = async () => {
+    if (!profile) return;
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    setIsSaving(true);
+    setSaveError(null);
+    try {
+      await saveProfile(profile);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Save failed";
+      setSaveError(msg);
+      toast.error("Save failed", { description: msg });
+    } finally {
+      setIsSaving(false);
     }
+  };
+
+  const updateProfile = (updatedProfile: Profile) => {
+    setProfile(updatedProfile);
+    debouncedSave(updatedProfile);
   };
 
   const handleCreatePage = () => {
     if (!profile) return;
-
     const newPage: BentoPage = {
       id: Date.now().toString(),
       name: `Page ${profile.pages.length + 1}`,
@@ -97,18 +149,14 @@ export default function Dashboard() {
       createdAt: Date.now(),
       updatedAt: Date.now(),
     };
-
-    setProfile({
-      ...profile,
-      pages: [...profile.pages, newPage],
-    });
+    updateProfile({ ...profile, pages: [...profile.pages, newPage] });
     setCurrentPageId(newPage.id);
   };
 
   const handleDeletePage = (pageId: string) => {
     if (!profile) return;
     const updatedPages = profile.pages.filter((p) => p.id !== pageId);
-    setProfile({
+    updateProfile({
       ...profile,
       pages: updatedPages,
       defaultPageId: profile.defaultPageId === pageId ? updatedPages[0]?.id : profile.defaultPageId,
@@ -120,7 +168,7 @@ export default function Dashboard() {
 
   const handleToggleFavorite = (pageId: string) => {
     if (!profile) return;
-    setProfile({
+    updateProfile({
       ...profile,
       pages: profile.pages.map((p) =>
         p.id === pageId ? { ...p, isFavorite: !p.isFavorite } : p
@@ -128,15 +176,23 @@ export default function Dashboard() {
     });
   };
 
-  const handleRenamePage = (pageId: string, name: string) => {
+  const handleRenamePage = async (pageId: string, name: string) => {
     if (!profile) return;
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-    setProfile({
+    const updated = {
       ...profile,
       pages: profile.pages.map((p) =>
         p.id === pageId ? { ...p, name, slug, updatedAt: Date.now() } : p
       ),
-    });
+    };
+    setProfile(updated);
+    // Save immediately — don't rely on debounce for renames
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    try {
+      await saveProfile(updated);
+    } catch (err) {
+      toast.error("Failed to rename page");
+    }
   };
 
   const handleSharePage = (page: BentoPage) => {
@@ -148,7 +204,6 @@ export default function Dashboard() {
 
   const handleAddBlock = (type: Block["type"]) => {
     if (!profile || !currentPage) return;
-
     const newBlock: Block = {
       id: Date.now().toString(),
       type,
@@ -163,8 +218,7 @@ export default function Dashboard() {
       height: 1,
       position: currentPage.blocks.length,
     };
-
-    setProfile({
+    updateProfile({
       ...profile,
       pages: profile.pages.map((p) =>
         p.id === currentPageId
@@ -176,37 +230,23 @@ export default function Dashboard() {
 
   const getDefaultIcon = (type: Block["type"]): string => {
     const icons: Record<Block["type"], string> = {
-      link: "🔗",
-      social: "🌐",
-      text: "📝",
-      image: "🖼️",
-      video: "🎥",
-      nft: "🎨",
-      token: "💰",
-      chart: "📊",
-      music: "🎵",
+      link: "🔗", social: "🌐", text: "📝", image: "🖼️",
+      video: "🎥", nft: "🎨", token: "💰", chart: "📊", music: "🎵",
     };
     return icons[type];
   };
 
   const getDefaultColor = (type: Block["type"]): string => {
     const colors: Record<Block["type"], string> = {
-      link: "#8b5cf6",
-      social: "#1da1f2",
-      text: "#6366f1",
-      image: "#ec4899",
-      video: "#f59e0b",
-      nft: "#8b5cf6",
-      token: "#10b981",
-      chart: "#3b82f6",
-      music: "#ef4444",
+      link: "#8b5cf6", social: "#1da1f2", text: "#6366f1", image: "#ec4899",
+      video: "#f59e0b", nft: "#8b5cf6", token: "#10b981", chart: "#3b82f6", music: "#ef4444",
     };
     return colors[type];
   };
 
   const handleUpdateBlock = (updatedBlock: Block) => {
     if (!profile) return;
-    setProfile({
+    updateProfile({
       ...profile,
       pages: profile.pages.map((p) =>
         p.id === currentPageId
@@ -223,7 +263,7 @@ export default function Dashboard() {
 
   const handleDeleteBlock = (blockId: string) => {
     if (!profile) return;
-    setProfile({
+    updateProfile({
       ...profile,
       pages: profile.pages.map((p) =>
         p.id === currentPageId
@@ -240,6 +280,8 @@ export default function Dashboard() {
   };
 
   const handleLogout = () => {
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    logout();
     disconnect();
     navigate("/");
   };
@@ -260,7 +302,43 @@ export default function Dashboard() {
     return { backgroundColor: block.bgColor };
   };
 
-  if (!profile) {
+  if (isAuthenticating) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="size-12 border-4 border-gray-200 border-t-purple-500 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Authenticating...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isConnected && !isAuthenticated && !isAuthenticating) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-800 text-lg mb-2">Authentication failed</p>
+          <p className="text-gray-500 text-sm mb-4">{authError || "Could not verify your wallet signature."}</p>
+          <div className="flex gap-3 justify-center">
+            <button
+              onClick={() => retryAuth()}
+              className="px-6 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+            >
+              Retry
+            </button>
+            <button
+              onClick={() => { disconnect(); navigate("/"); }}
+              className="px-6 py-2.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              Disconnect
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoading || !profile) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -291,6 +369,9 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            {saveError && (
+              <span className="text-sm text-red-500">{saveError}</span>
+            )}
             <button
               onClick={handlePreview}
               className="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2"
@@ -304,7 +385,7 @@ export default function Dashboard() {
               className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2 disabled:opacity-50"
             >
               <Save className="size-4" />
-              {isSaving ? "Saved!" : "Save"}
+              {isSaving ? "Saving..." : "Save"}
             </button>
             <button
               onClick={handleLogout}
@@ -551,14 +632,14 @@ export default function Dashboard() {
             )}
 
             {activeTab === "profile" && (
-              <ProfileEditor profile={profile} onUpdate={setProfile} />
+              <ProfileEditor profile={profile} onUpdate={updateProfile} />
             )}
 
             {activeTab === "theme" && currentPage && (
               <ThemeEditor
                 profile={profile}
                 onUpdate={(updatedProfile) => {
-                  setProfile({
+                  updateProfile({
                     ...updatedProfile,
                     pages: updatedProfile.pages.map((p) =>
                       p.id === currentPageId ? { ...p, theme: updatedProfile.theme } : p

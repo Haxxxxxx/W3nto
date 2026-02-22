@@ -13,13 +13,30 @@ export default function UserProfile() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [currentPage, setCurrentPage] = useState<BentoPage | null>(null);
   const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
-    if (username) {
-      const userProfile = getProfileByUsername(username);
-      setProfile(userProfile);
+    if (!username) return;
 
-      if (userProfile) {
+    let cancelled = false;
+
+    async function loadProfile() {
+      setLoading(true);
+      setNotFound(false);
+
+      try {
+        const userProfile = await getProfileByUsername(username!);
+
+        if (cancelled) return;
+
+        if (!userProfile) {
+          setNotFound(true);
+          setLoading(false);
+          return;
+        }
+
+        setProfile(userProfile);
+
         let page: BentoPage | undefined;
         if (pageSlug) {
           page = userProfile.pages.find((p) => p.slug === pageSlug);
@@ -27,10 +44,16 @@ export default function UserProfile() {
           page = userProfile.pages.find((p) => p.id === userProfile.defaultPageId) || userProfile.pages[0];
         }
         setCurrentPage(page || null);
+      } catch (err) {
+        console.error("Failed to load profile:", err);
+        if (!cancelled) setNotFound(true);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-
-      setLoading(false);
     }
+
+    loadProfile();
+    return () => { cancelled = true; };
   }, [username, pageSlug]);
 
   if (loading) {
@@ -44,7 +67,7 @@ export default function UserProfile() {
     );
   }
 
-  if (!profile || !currentPage) {
+  if (notFound || !profile || !currentPage) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center max-w-md">
@@ -104,7 +127,6 @@ export default function UserProfile() {
   };
 
   const renderBlockContent = (block: Block) => {
-    // NFT Block
     if (block.type === "nft" && block.nftImage) {
       return (
         <div className="absolute inset-0">
@@ -118,7 +140,6 @@ export default function UserProfile() {
       );
     }
 
-    // Chart Block
     if (block.type === "chart") {
       return (
         <div className="absolute inset-0 p-4 flex flex-col">
@@ -138,17 +159,12 @@ export default function UserProfile() {
             )}
           </div>
           <div className="flex-1 min-h-0">
-            <TokenChart
-              tokenAddress={block.tokenAddress}
-              chainId={block.chainId}
-              textColor={block.textColor}
-            />
+            <TokenChart tokenAddress={block.tokenAddress} chainId={block.chainId} textColor={block.textColor} />
           </div>
         </div>
       );
     }
 
-    // Image Block
     if (block.type === "image" && block.imageUrl) {
       return (
         <div className="absolute inset-0">
@@ -158,23 +174,42 @@ export default function UserProfile() {
       );
     }
 
-    // Default Content (Link, Social, Text, Token)
+    // Video Block
+    if (block.type === "video" && block.url) {
+      return (
+        <div className="absolute inset-0 flex flex-col items-center justify-center p-4">
+          <div className="text-4xl mb-2">🎥</div>
+          <div className="text-base mb-1">{block.title}</div>
+          {block.content && (
+            <div className="text-sm opacity-75 line-clamp-2">{block.content}</div>
+          )}
+        </div>
+      );
+    }
+
+    // Music Block
+    if (block.type === "music") {
+      return (
+        <div className="absolute inset-0 flex flex-col items-center justify-center p-4">
+          <div className="text-4xl mb-2">🎵</div>
+          <div className="text-base mb-1">{block.title}</div>
+          {block.content && (
+            <div className="text-sm opacity-75 line-clamp-2">{block.content}</div>
+          )}
+        </div>
+      );
+    }
+
     return (
       <div className="relative z-10 text-center px-4">
         {block.bgType === "image" && block.bgImage && (
           <div className="absolute inset-0 bg-black/30 -z-10"></div>
         )}
         {getIconDisplay(block)}
-        <div className="text-base md:text-lg mb-1">
-          {block.title}
-        </div>
+        <div className="text-base md:text-lg mb-1">{block.title}</div>
         {block.content && (
-          <div className="text-sm opacity-75 line-clamp-2">
-            {block.content}
-          </div>
+          <div className="text-sm opacity-75 line-clamp-2">{block.content}</div>
         )}
-
-        {/* Token Block - Show chain */}
         {block.type === "token" && block.chainId && (
           <div className="mt-2 inline-flex items-center gap-1 px-2 py-1 bg-white/20 backdrop-blur-sm rounded-full text-xs">
             <span>{chainLogos[block.chainId]}</span>
@@ -232,7 +267,6 @@ export default function UserProfile() {
             )}
           </div>
 
-          {/* Page Navigation if multiple pages */}
           {profile.pages.length > 1 && (
             <div className="flex items-center justify-center gap-2 mt-6 flex-wrap">
               {profile.pages.map((page) => (
@@ -286,7 +320,6 @@ export default function UserProfile() {
                   </div>
                 )}
 
-                {/* Hover Effect */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
               </div>
             ))}

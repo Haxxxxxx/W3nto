@@ -1,6 +1,8 @@
+import { useState, useEffect, useRef } from "react";
 import { Profile } from "../types";
 import { Upload, Eye, EyeOff } from "lucide-react";
 import { createImageInput } from "../utils/imageUpload";
+import { isReservedUsername, isUsernameAvailable } from "../utils/storage";
 
 interface ProfileEditorProps {
   profile: Profile;
@@ -8,6 +10,34 @@ interface ProfileEditorProps {
 }
 
 export default function ProfileEditor({ profile, onUpdate }: ProfileEditorProps) {
+  const [usernameStatus, setUsernameStatus] = useState<"idle" | "checking" | "available" | "taken">("idle");
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const originalUsernameRef = useRef(profile.username);
+
+  useEffect(() => {
+    const username = profile.username;
+    if (!username || username === originalUsernameRef.current) {
+      setUsernameStatus("idle");
+      return;
+    }
+    if (isReservedUsername(username)) {
+      setUsernameStatus("taken");
+      return;
+    }
+
+    setUsernameStatus("checking");
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const available = await isUsernameAvailable(username);
+        setUsernameStatus(available ? "available" : "taken");
+      } catch {
+        setUsernameStatus("idle");
+      }
+    }, 500);
+
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [profile.username]);
   const handleAvatarUpload = () => {
     createImageInput((dataUrl) => {
       onUpdate({ ...profile, avatar: dataUrl });
@@ -60,13 +90,30 @@ export default function ProfileEditor({ profile, onUpdate }: ProfileEditorProps)
           <input
             type="text"
             value={profile.username}
-            onChange={(e) => onUpdate({ ...profile, username: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "") })}
-            className="flex-1 px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+            onChange={(e) => {
+              const value = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "");
+              if (!isReservedUsername(value)) {
+                onUpdate({ ...profile, username: value });
+              }
+            }}
+            className={`flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 ${
+              isReservedUsername(profile.username) ? "border-red-400" : "border-gray-200"
+            }`}
             placeholder="username"
             pattern="[a-z0-9_]+"
           />
         </div>
-        <p className="text-sm text-gray-500 mt-1">Only lowercase letters, numbers, and underscores</p>
+        {isReservedUsername(profile.username) ? (
+          <p className="text-sm text-red-500 mt-1">This username is reserved</p>
+        ) : usernameStatus === "checking" ? (
+          <p className="text-sm text-gray-400 mt-1">Checking availability...</p>
+        ) : usernameStatus === "taken" ? (
+          <p className="text-sm text-red-500 mt-1">Username taken</p>
+        ) : usernameStatus === "available" ? (
+          <p className="text-sm text-green-600 mt-1">Username available</p>
+        ) : (
+          <p className="text-sm text-gray-500 mt-1">Only lowercase letters, numbers, and underscores</p>
+        )}
       </div>
 
       <div>

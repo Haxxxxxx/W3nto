@@ -1,5 +1,17 @@
 node_modules
 dist
+lib
 .DS_Store
 mockup-reference/
 *.zip
+.env
+.env.local
+*-debug.log
+Web3 Profile Link App/
+
+# Android build artifacts
+android/.gradle/
+android/.kotlin/
+android/app/build/
+android/build/
+android/local.properties

@@ -79,7 +79,6 @@ export interface Profile {
   bio: string;
   avatar: string;
   theme: Theme;
-  blocks: Block[];
   pages: BentoPage[];
   defaultPageId?: string;
   showWallet: boolean;
