@@ -84,6 +84,7 @@ export default function Dashboard() {
             blocks: (userProfile as any).blocks || [],
             theme: userProfile.theme,
             isFavorite: true,
+            position: 0,
             createdAt: Date.now(),
             updatedAt: Date.now(),
           };
@@ -213,6 +214,7 @@ export default function Dashboard() {
       blocks: [],
       theme: profile.theme,
       isFavorite: false,
+      position: profile.pages.length,
       createdAt: Date.now(),
       updatedAt: Date.now(),
     };

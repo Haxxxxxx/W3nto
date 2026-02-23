@@ -33,7 +33,7 @@ export default function ThemeEditor({ profile, onUpdate }: ThemeEditorProps) {
     primaryColor: profile.theme.primaryColor || "#8b5cf6",
     secondaryColor: profile.theme.secondaryColor || "#ec4899",
     textColor: profile.theme.textColor || "#111827",
-    borderRadius: profile.theme.borderRadius || "16px",
+    borderRadius: profile.theme.borderRadius ?? 16,
     fontFamily: profile.theme.fontFamily || "Inter",
     buttonStyle: profile.theme.buttonStyle || "rounded",
     buttonBackground: profile.theme.buttonBackground || "#8b5cf6",
@@ -134,13 +134,13 @@ export default function ThemeEditor({ profile, onUpdate }: ThemeEditorProps) {
           type="range"
           min="0"
           max="32"
-          value={parseInt(theme.borderRadius)}
-          onChange={(e) => updateTheme("borderRadius", `${e.target.value}px`)}
+          value={theme.borderRadius}
+          onChange={(e) => updateTheme("borderRadius", parseInt(e.target.value))}
           className="w-full"
         />
         <div className="flex justify-between text-xs text-gray-600 mt-1">
           <span>0px (Sharp)</span>
-          <span className="font-medium">{theme.borderRadius}</span>
+          <span className="font-medium">{theme.borderRadius}px</span>
           <span>32px (Round)</span>
         </div>
       </div>
@@ -159,7 +159,7 @@ export default function ThemeEditor({ profile, onUpdate }: ThemeEditorProps) {
               className="p-6 shadow-lg"
               style={{
                 backgroundColor: theme.cardBackground,
-                borderRadius: theme.borderRadius,
+                borderRadius: theme.borderRadius + "px",
               }}
             >
               <h3
@@ -180,7 +180,7 @@ export default function ThemeEditor({ profile, onUpdate }: ThemeEditorProps) {
               style={{
                 backgroundColor: theme.buttonBackground,
                 color: theme.buttonText,
-                borderRadius: theme.buttonStyle === "rounded" ? "9999px" : theme.borderRadius,
+                borderRadius: theme.buttonStyle === "rounded" ? "9999px" : theme.borderRadius + "px",
               }}
             >
               Button Example

@@ -68,6 +68,39 @@ export default function UserProfile() {
     return () => { cancelled = true; };
   }, [username, pageSlug]);
 
+  // Dynamic document title
+  useEffect(() => {
+    if (profile && currentPage) {
+      const pageName = profile.pages.length > 1 ? ` — ${currentPage.name}` : "";
+      document.title = `${profile.displayName || profile.username}${pageName} | W3nto`;
+    }
+    return () => {
+      document.title = "W3nto — Web3 Profile Builder";
+    };
+  }, [profile, currentPage]);
+
+  // Dynamic canonical link
+  useEffect(() => {
+    if (!profile) return;
+
+    const url =
+      currentPage && profile.pages.length > 1 && currentPage.id !== profile.defaultPageId
+        ? `https://w3nto.app/${profile.username}/${currentPage.slug}`
+        : `https://w3nto.app/${profile.username}`;
+
+    let link = document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
+    if (!link) {
+      link = document.createElement("link");
+      link.rel = "canonical";
+      document.head.appendChild(link);
+    }
+    link.href = url;
+
+    return () => {
+      if (link) link.href = "https://w3nto.app";
+    };
+  }, [profile, currentPage]);
+
   if (loading) {
     return (
       <div className="min-h-screen py-12 px-6" style={{ backgroundColor: "#0a0a0a" }}>
@@ -357,7 +390,7 @@ export default function UserProfile() {
     );
   };
 
-  const buttonRadius = currentPage.theme.buttonStyle === "rounded" ? "9999px" : currentPage.theme.borderRadius;
+  const buttonRadius = currentPage.theme.buttonStyle === "rounded" ? "9999px" : currentPage.theme.borderRadius + "px";
 
   return (
     <div
@@ -461,7 +494,7 @@ export default function UserProfile() {
                   gridRow: `span ${block.height}`,
                   ...getBlockBackground(block),
                   color: block.textColor,
-                  borderRadius: currentPage.theme.borderRadius,
+                  borderRadius: currentPage.theme.borderRadius + "px",
                 }}
                 onClick={() => { if (block.type === "video" || block.type === "music") return; handleBlockClick(block); }}
               >

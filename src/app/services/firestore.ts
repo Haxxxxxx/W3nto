@@ -154,12 +154,13 @@ export async function getPages(username: string): Promise<BentoPage[]> {
         blocks,
         theme: data.theme ?? defaultTheme(),
         isFavorite: data.isFavorite ?? false,
+        position: data.position ?? 0,
         createdAt: data.createdAt?.toMillis?.() ?? Date.now(),
         updatedAt: data.updatedAt?.toMillis?.() ?? Date.now(),
       } as BentoPage;
     })
   );
-  return pages;
+  return pages.sort((a, b) => a.position - b.position);
 }
 
 export async function savePage(username: string, page: BentoPage): Promise<void> {
@@ -173,8 +174,15 @@ export async function savePage(username: string, page: BentoPage): Promise<void>
     slug: page.slug,
     theme: page.theme,
     isFavorite: page.isFavorite,
+    position: page.position ?? 0,
     updatedAt: serverTimestamp(),
   };
+
+  // Only set createdAt on first write
+  const pageDoc = await getDoc(pageRef);
+  if (!pageDoc.exists()) {
+    pageData.createdAt = serverTimestamp();
+  }
 
   await setDoc(pageRef, pageData, { merge: true });
 
@@ -289,7 +297,7 @@ function defaultTheme() {
     primaryColor: "#8b5cf6",
     secondaryColor: "#ec4899",
     textColor: "#111827",
-    borderRadius: "16px",
+    borderRadius: 16,
     fontFamily: "Inter",
     buttonStyle: "rounded" as const,
     buttonBackground: "#8b5cf6",

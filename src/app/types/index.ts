@@ -68,6 +68,7 @@ export interface BentoPage {
   blocks: Block[];
   theme: Theme;
   isFavorite: boolean;
+  position: number;
   createdAt: number;
   updatedAt: number;
 }
@@ -90,7 +91,7 @@ export interface Theme {
   primaryColor: string;
   secondaryColor: string;
   textColor: string;
-  borderRadius: string;
+  borderRadius: number;
   fontFamily: string;
   buttonStyle: "rounded" | "squared";
   buttonBackground: string;
