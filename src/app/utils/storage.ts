@@ -33,8 +33,7 @@ export async function getProfile(walletAddress: string): Promise<Profile | null>
       saveLocalProfile(profile); // cache locally
       return profile;
     }
-  } catch (err) {
-    console.warn("Firestore read failed, falling back to cache:", err);
+  } catch {
     const cached = getLocalProfiles()[walletAddress];
     if (cached) {
       toast.warning("Loaded from cache", { description: "Changes may not save until connection is restored." });
@@ -55,8 +54,7 @@ export async function getProfileByUsername(username: string): Promise<Profile | 
       saveLocalProfile(profile);
       return profile;
     }
-  } catch (err) {
-    console.warn("Firestore read failed, falling back to cache:", err);
+  } catch {
     const cached = Object.values(getLocalProfiles()).find(
       (p) => p.username.toLowerCase() === username.toLowerCase()
     );
@@ -87,7 +85,6 @@ export async function saveProfile(profile: Profile): Promise<void> {
       await firestoreService.savePage(profile.username, page);
     }
   } catch (err) {
-    console.error("Firestore save failed:", err);
     throw err;
   }
 }

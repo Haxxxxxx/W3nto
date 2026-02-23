@@ -13,9 +13,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.w3nto.app.R
 import com.w3nto.app.ui.theme.DarkBackground
 import com.w3nto.app.ui.theme.DarkSurfaceVariant
 import com.w3nto.app.ui.theme.Purple300
@@ -90,8 +92,8 @@ fun OnboardingScreen(
             OutlinedTextField(
                 value = uiState.username,
                 onValueChange = { viewModel.updateUsername(it) },
-                label = { Text("Username") },
-                placeholder = { Text("e.g. satoshi") },
+                label = { Text(stringResource(R.string.label_username)) },
+                placeholder = { Text(stringResource(R.string.placeholder_username)) },
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Default.Person,
@@ -106,7 +108,7 @@ fun OnboardingScreen(
                         Text(uiState.usernameError!!, color = MaterialTheme.colorScheme.error)
                     } else {
                         Text(
-                            "Lowercase letters, numbers, underscores (max 30 chars)",
+                            stringResource(R.string.hint_username),
                             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
                         )
                     }
@@ -129,15 +131,15 @@ fun OnboardingScreen(
                     uiState.isCheckingUsername -> {
                         CircularProgressIndicator(modifier = Modifier.size(20.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Checking…", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                        Text(stringResource(R.string.status_checking), fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                     }
                     uiState.isCreatingProfile -> {
                         CircularProgressIndicator(modifier = Modifier.size(20.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Creating…", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                        Text(stringResource(R.string.status_creating), fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                     }
                     else -> {
-                        Text("Create My Profile", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                        Text(stringResource(R.string.onboarding_create_profile), fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                     }
                 }
             }

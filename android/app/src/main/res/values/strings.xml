@@ -18,4 +18,37 @@
     <!-- Accessibility -->
     <string name="content_description_avatar">%s avatar</string>
     <string name="badge_new">NEW</string>
+
+    <!-- Settings screen -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_sign_out">Sign Out</string>
+    <string name="settings_sign_out_confirm">Are you sure you want to disconnect your wallet?</string>
+
+    <!-- My Profile screen -->
+    <string name="my_profile_title">My Profile</string>
+    <string name="label_display_name">Display Name</string>
+    <string name="label_bio">Bio</string>
+    <string name="action_view_public_profile">View Public Profile</string>
+    <string name="action_new_page">New Page</string>
+    <string name="label_page_name">Page name</string>
+    <string name="placeholder_page_name">e.g. Main, NFTs, Links</string>
+    <string name="action_create">Create</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_create_profile">Create Profile</string>
+
+    <!-- Shared form labels -->
+    <string name="label_username">Username</string>
+    <string name="placeholder_username">e.g. satoshi</string>
+    <string name="hint_username">Lowercase letters, numbers, underscores (max 30 chars)</string>
+
+    <!-- Public Profile screen -->
+    <string name="error_connection_title">Connection error</string>
+    <string name="error_connection_desc">Couldn\'t load this profile. Check your connection and try again.</string>
+    <string name="action_try_again">Try Again</string>
+    <string name="action_go_back">Go Back</string>
+
+    <!-- Onboarding screen -->
+    <string name="status_checking">Checking\u2026</string>
+    <string name="status_creating">Creating\u2026</string>
+    <string name="onboarding_create_profile">Create My Profile</string>
 </resources>

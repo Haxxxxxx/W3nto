@@ -26,7 +26,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import com.w3nto.app.R
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -220,14 +222,14 @@ fun PublicProfileScreen(
                     }
                     Spacer(modifier = Modifier.height(24.dp))
                     Text(
-                        text = "Connection error",
+                        text = stringResource(R.string.error_connection_title),
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
                         color = textColor
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        text = "Couldn't load this profile. Check your connection and try again.",
+                        text = stringResource(R.string.error_connection_desc),
                         fontSize = 15.sp,
                         color = textColor.copy(alpha = 0.6f),
                         textAlign = TextAlign.Center,
@@ -245,7 +247,7 @@ fun PublicProfileScreen(
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Try Again")
+                        Text(stringResource(R.string.action_try_again))
                     }
                 }
             }
@@ -301,7 +303,7 @@ fun PublicProfileScreen(
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Go Back")
+                        Text(stringResource(R.string.action_go_back))
                     }
                 }
             }

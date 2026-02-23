@@ -28,8 +28,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.w3nto.app.R
 import coil.compose.AsyncImage
 import com.w3nto.app.data.model.BentoPage
 import com.w3nto.app.ui.components.BentoGrid
@@ -61,7 +63,7 @@ fun MyProfileScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text("My Profile") },
+                title = { Text(stringResource(R.string.my_profile_title)) },
                 actions = {
                     if (uiState.profile != null && !uiState.showCreateProfile) {
                         if (uiState.isEditing) {
@@ -209,15 +211,15 @@ private fun CreateProfileForm(
         OutlinedTextField(
             value = username,
             onValueChange = onUsernameChange,
-            label = { Text("Username") },
-            placeholder = { Text("e.g. satoshi") },
+            label = { Text(stringResource(R.string.label_username)) },
+            placeholder = { Text(stringResource(R.string.placeholder_username)) },
             singleLine = true,
             isError = error != null,
             supportingText = {
                 if (error != null) {
                     Text(error, color = MaterialTheme.colorScheme.error)
                 } else {
-                    Text("Lowercase letters, numbers, underscores (max 30 chars)")
+                    Text(stringResource(R.string.hint_username))
                 }
             },
             modifier = Modifier.fillMaxWidth()
@@ -237,9 +239,9 @@ private fun CreateProfileForm(
                     strokeWidth = 2.dp
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(if (isChecking) "Checking…" else "Creating…")
+                Text(if (isChecking) stringResource(R.string.status_checking) else stringResource(R.string.status_creating))
             } else {
-                Text("Create Profile")
+                Text(stringResource(R.string.action_create_profile))
             }
         }
     }
@@ -322,7 +324,7 @@ private fun ProfileContent(
                         OutlinedTextField(
                             value = uiState.editDisplayName,
                             onValueChange = onDisplayNameChange,
-                            label = { Text("Display Name") },
+                            label = { Text(stringResource(R.string.label_display_name)) },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -330,7 +332,7 @@ private fun ProfileContent(
                         OutlinedTextField(
                             value = uiState.editBio,
                             onValueChange = onBioChange,
-                            label = { Text("Bio") },
+                            label = { Text(stringResource(R.string.label_bio)) },
                             maxLines = 3,
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -363,7 +365,7 @@ private fun ProfileContent(
                             onClick = { onViewProfile(profile.username) },
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text("View Public Profile")
+                            Text(stringResource(R.string.action_view_public_profile))
                         }
                     }
                 }
@@ -387,7 +389,7 @@ private fun ProfileContent(
                 TextButton(onClick = onShowCreatePage) {
                     Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("New Page")
+                    Text(stringResource(R.string.action_new_page))
                 }
             }
         }
@@ -471,13 +473,13 @@ private fun CreatePageDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("New Page") },
+        title = { Text(stringResource(R.string.action_new_page)) },
         text = {
             OutlinedTextField(
                 value = pageName,
                 onValueChange = onNameChange,
-                label = { Text("Page name") },
-                placeholder = { Text("e.g. Main, NFTs, Links") },
+                label = { Text(stringResource(R.string.label_page_name)) },
+                placeholder = { Text(stringResource(R.string.placeholder_page_name)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -487,12 +489,12 @@ private fun CreatePageDialog(
                 onClick = onCreate,
                 enabled = pageName.isNotBlank()
             ) {
-                Text("Create")
+                Text(stringResource(R.string.action_create))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.action_cancel))
             }
         }
     )

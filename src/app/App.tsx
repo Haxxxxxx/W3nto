@@ -15,8 +15,8 @@ class ErrorBoundary extends Component<
   static getDerivedStateFromError(error: Error) {
     return { hasError: true, error };
   }
-  componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error("W3nto Error Boundary:", error, info);
+  componentDidCatch(_error: Error, _info: ErrorInfo) {
+    // Error captured by boundary — extend with error reporting service if needed
   }
   render() {
     if (this.state.hasError) {

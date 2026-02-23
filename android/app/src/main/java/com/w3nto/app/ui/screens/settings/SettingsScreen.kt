@@ -14,7 +14,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import com.w3nto.app.R
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -30,7 +32,7 @@ fun SettingsScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("Settings") })
+            TopAppBar(title = { Text(stringResource(R.string.settings_title)) })
         }
     ) { innerPadding ->
         Column(
@@ -118,7 +120,7 @@ fun SettingsScreen(
                         ListItem(
                             headlineContent = {
                                 Text(
-                                    text = "Sign Out",
+                                    text = stringResource(R.string.settings_sign_out),
                                     color = MaterialTheme.colorScheme.error,
                                     fontWeight = FontWeight.Medium
                                 )
@@ -168,8 +170,8 @@ fun SettingsScreen(
     if (showSignOutDialog) {
         AlertDialog(
             onDismissRequest = { showSignOutDialog = false },
-            title = { Text("Sign Out") },
-            text = { Text("Are you sure you want to disconnect your wallet?") },
+            title = { Text(stringResource(R.string.settings_sign_out)) },
+            text = { Text(stringResource(R.string.settings_sign_out_confirm)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -177,12 +179,12 @@ fun SettingsScreen(
                         viewModel.signOut()
                     }
                 ) {
-                    Text("Sign Out", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.settings_sign_out), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showSignOutDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.action_cancel))
                 }
             }
         )
