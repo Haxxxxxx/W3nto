@@ -213,7 +213,7 @@ export default function Dashboard() {
   };
 
   const handleDeletePage = async (pageId: string) => {
-    if (!profile || !window.confirm("Delete this page?")) return;
+    if (!profile) return;
     try {
       await firestoreService.deletePage(profile.username, pageId);
     } catch (err) {

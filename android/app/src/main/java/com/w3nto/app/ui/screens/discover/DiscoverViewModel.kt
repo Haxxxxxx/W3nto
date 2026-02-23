@@ -115,7 +115,7 @@ class DiscoverViewModel @Inject constructor(
         if (state.isLoadingMore || !state.hasMore || state.searchQuery.isNotBlank()) return
         if (loadMoreJob?.isActive == true) return
         loadMoreJob = viewModelScope.launch {
-            _uiState.value = state.copy(isLoadingMore = true)
+            _uiState.value = _uiState.value.copy(isLoadingMore = true)
             val result = discoverRepository.getProfiles()
             result.fold(
                 onSuccess = { newProfiles ->

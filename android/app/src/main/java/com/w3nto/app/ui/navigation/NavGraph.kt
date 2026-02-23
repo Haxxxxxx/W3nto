@@ -65,9 +65,12 @@ fun NavGraph(
     }
 
     // Handle deep link navigation — wait for NavHost to initialize before navigating
-    LaunchedEffect(deepLinkRoute, navController.currentDestination) {
+    LaunchedEffect(deepLinkRoute) {
         val route = deepLinkRoute ?: return@LaunchedEffect
-        if (navController.currentDestination == null) return@LaunchedEffect
+        // Wait for NavHost to initialize
+        while (navController.currentDestination == null) {
+            kotlinx.coroutines.delay(50)
+        }
         try {
             navController.navigate(route) {
                 launchSingleTop = true

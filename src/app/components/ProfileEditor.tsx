@@ -39,9 +39,6 @@ export default function ProfileEditor({ profile, onUpdate }: ProfileEditorProps)
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [profile.username]);
 
-  useEffect(() => {
-    originalUsernameRef.current = profile.username;
-  }, [profile.username]);
   const handleAvatarUpload = () => {
     createImageInput((dataUrl) => {
       onUpdate({ ...profile, avatar: dataUrl });

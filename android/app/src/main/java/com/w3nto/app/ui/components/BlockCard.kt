@@ -50,19 +50,19 @@ fun BlockCard(
                     if (gradient != null) {
                         val colors = listOf(parseColor(gradient.from), parseColor(gradient.to))
                         val brush = when (gradient.direction) {
-                            "to-b" -> Brush.verticalGradient(colors)
-                            "to-br" -> Brush.linearGradient(
+                            "180deg", "to-b" -> Brush.verticalGradient(colors)
+                            "135deg", "to-br" -> Brush.linearGradient(
                                 colors = colors,
                                 start = Offset.Zero,
                                 end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)
                             )
-                            "to-tr" -> Brush.linearGradient(
+                            "45deg", "to-tr" -> Brush.linearGradient(
                                 colors = colors,
                                 start = Offset(0f, Float.POSITIVE_INFINITY),
                                 end = Offset(Float.POSITIVE_INFINITY, 0f)
                             )
                             "radial" -> Brush.radialGradient(colors)
-                            else -> Brush.horizontalGradient(colors)
+                            else -> Brush.horizontalGradient(colors) // "90deg", "to-r", or any unknown
                         }
                         Box(modifier = Modifier.fillMaxSize().background(brush = brush))
                     } else {

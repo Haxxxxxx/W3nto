@@ -121,6 +121,13 @@ export async function renameProfile(oldUsername: string, newUsername: string, ui
     }, { merge: true });
   }
 
+  // 5.5. Update favorites across all users that reference the old username
+  // Note: This requires querying across all users' favorites subcollections.
+  // Firestore doesn't support collection group queries on subcollections with
+  // arbitrary parent paths efficiently. For now, we skip this — favorites
+  // will gracefully fail (profile not found) and users can re-favorite.
+  // TODO: Implement via Cloud Function with collectionGroup query when needed.
+
   // 6. Delete old profile and subcollections
   for (const pageDoc of pagesSnap.docs) {
     const blocksSnap = await getDocs(collection(db, "profiles", oldUsername, "pages", pageDoc.id, "blocks"));

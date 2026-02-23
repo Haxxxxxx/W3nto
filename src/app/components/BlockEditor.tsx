@@ -198,7 +198,7 @@ export default function BlockEditor({ block, onSave, onClose }: BlockEditorProps
             />
           </div>
 
-          {(editedBlock.type === "link" || editedBlock.type === "social") && (
+          {(editedBlock.type === "link" || editedBlock.type === "social" || editedBlock.type === "video" || editedBlock.type === "music") && (
             <div>
               <label className="block text-sm mb-2">URL</label>
               <input
@@ -206,7 +206,11 @@ export default function BlockEditor({ block, onSave, onClose }: BlockEditorProps
                 value={editedBlock.url || ""}
                 onChange={(e) => setEditedBlock({ ...editedBlock, url: e.target.value })}
                 className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                placeholder="https://example.com"
+                placeholder={
+                  editedBlock.type === "video" ? "https://youtube.com/watch?v=..." :
+                  editedBlock.type === "music" ? "https://open.spotify.com/track/..." :
+                  "https://example.com"
+                }
               />
             </div>
           )}

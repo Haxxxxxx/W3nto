@@ -408,7 +408,7 @@ export default function UserProfile() {
               >
                 {renderBlockContent(block)}
 
-                {block.url && (
+                {block.url && block.type !== "video" && block.type !== "music" && (
                   <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
                     <div className="size-8 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center">
                       <ExternalLink className="size-4" />
@@ -416,7 +416,9 @@ export default function UserProfile() {
                   </div>
                 )}
 
-                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
+                {block.type !== "video" && block.type !== "music" && (
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
+                )}
               </div>
             ))}
           </div>
