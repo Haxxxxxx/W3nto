@@ -4,6 +4,7 @@ import android.content.Intent
 import android.net.Uri
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -74,7 +75,7 @@ fun PublicProfileScreen(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text("@$username", color = textColor) },
+                title = { Text("$username.skr", color = textColor) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = textColor)
@@ -329,11 +330,40 @@ fun PublicProfileScreen(
                         theme = activeTheme
                     )
 
+                    if (uiState.isOwnProfile) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 4.dp)
+                                .background(primaryColor.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
+                                .clickable {
+                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://w3nto.app/dashboard"))
+                                    context.startActivity(intent)
+                                }
+                                .padding(12.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "Your profile — tap to edit on web",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = primaryColor,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+
                     if (uiState.pages.size > 1) {
                         PageSelector(
                             pages = uiState.pages,
                             selectedPageId = uiState.currentPage?.id ?: "",
-                            onPageSelected = { viewModel.selectPage(it) },
+                            onPageSelected = { page ->
+                                if (uiState.isOwnProfile) {
+                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://w3nto.app/dashboard"))
+                                    context.startActivity(intent)
+                                } else {
+                                    viewModel.selectPage(page)
+                                }
+                            },
                             theme = activeTheme
                         )
                     }

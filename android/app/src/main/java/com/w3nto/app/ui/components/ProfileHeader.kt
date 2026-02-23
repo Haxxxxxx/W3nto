@@ -14,7 +14,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -87,7 +86,7 @@ fun ProfileHeader(
 
         // Display name
         Text(
-            text = profile.displayName.ifEmpty { "@${profile.username}" },
+            text = profile.displayName.ifEmpty { profile.username },
             fontSize = 32.sp,
             fontWeight = FontWeight.Bold,
             color = textColor
@@ -109,39 +108,17 @@ fun ProfileHeader(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Badges row
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
+        // .skr identity badge
+        Box(
+            modifier = Modifier
+                .background(cardBg, RoundedCornerShape(20.dp))
+                .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
-            // Username badge
-            Box(
-                modifier = Modifier
-                    .background(cardBg, RoundedCornerShape(20.dp))
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-            ) {
-                Text(
-                    text = "@${profile.username}",
-                    color = textColor,
-                    fontSize = 13.sp
-                )
-            }
-
-            // Wallet badge
-            if (profile.showWallet && profile.walletAddress.isNotEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .background(cardBg, RoundedCornerShape(20.dp))
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
-                ) {
-                    Text(
-                        text = profile.walletAddress.take(6) + "..." + profile.walletAddress.takeLast(4),
-                        color = textColor,
-                        fontSize = 13.sp,
-                        fontFamily = FontFamily.Monospace
-                    )
-                }
-            }
+            Text(
+                text = "${profile.username}.skr",
+                color = textColor,
+                fontSize = 13.sp
+            )
         }
     }
 }

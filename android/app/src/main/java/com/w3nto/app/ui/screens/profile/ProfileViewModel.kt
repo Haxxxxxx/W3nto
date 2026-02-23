@@ -29,7 +29,8 @@ data class PublicProfileUiState(
     val isRefreshing: Boolean = false,
     val notFound: Boolean = false,
     val error: String? = null,
-    val isFavorited: Boolean = false
+    val isFavorited: Boolean = false,
+    val isOwnProfile: Boolean = false
 )
 
 @HiltViewModel
@@ -96,7 +97,8 @@ class ProfileViewModel @Inject constructor(
                 pages = pages,
                 currentPage = currentPage,
                 blocks = blocks,
-                isRefreshing = false
+                isRefreshing = false,
+                isOwnProfile = profile.uid == auth.currentUser?.uid
             )
 
             if (currentPage != null) {
@@ -123,7 +125,10 @@ class ProfileViewModel @Inject constructor(
                 return@launch
             }
 
-            _uiState.value = _uiState.value.copy(profile = profile)
+            _uiState.value = _uiState.value.copy(
+                profile = profile,
+                isOwnProfile = profile.uid == auth.currentUser?.uid
+            )
 
             val pagesResult = pageRepository.getPages(username)
             val pages = pagesResult.getOrDefault(emptyList())

@@ -201,7 +201,7 @@ private fun FavoritePageCard(
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    text = "by @${favorite.username}",
+                    text = "${favorite.username}.skr",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary
                 )

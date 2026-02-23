@@ -9,7 +9,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -242,11 +241,6 @@ private fun ProfileCard(
                         }
                     }
                 }
-                Text(
-                    text = "@${profile.username}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary
-                )
                 if (profile.bio.isNotBlank()) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
@@ -257,38 +251,24 @@ private fun ProfileCard(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-                if (profile.showWallet && profile.walletAddress.isNotBlank()) {
-                    Spacer(modifier = Modifier.height(6.dp))
-                    WalletBadge(walletAddress = profile.walletAddress)
-                }
+                Spacer(modifier = Modifier.height(4.dp))
+                SkrBadge(username = profile.username)
             }
         }
     }
 }
 
 @Composable
-private fun WalletBadge(walletAddress: String) {
-    val shortened = walletAddress.take(6) + "..." + walletAddress.takeLast(4)
+private fun SkrBadge(username: String) {
     Surface(
         shape = RoundedCornerShape(6.dp),
         color = MaterialTheme.colorScheme.secondaryContainer
     ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = Icons.Default.AccountBalanceWallet,
-                contentDescription = null,
-                modifier = Modifier.size(12.dp),
-                tint = MaterialTheme.colorScheme.onSecondaryContainer
-            )
-            Spacer(modifier = Modifier.width(4.dp))
-            Text(
-                text = shortened,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSecondaryContainer
-            )
-        }
+        Text(
+            text = "$username.skr",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSecondaryContainer,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+        )
     }
 }
