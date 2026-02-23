@@ -85,16 +85,16 @@ class FirestoreDataSource @Inject constructor(
     }
 
     suspend fun searchProfiles(searchQuery: String): List<Profile> {
-        val end = searchQuery + "\uf8ff"
+        val query = searchQuery.lowercase()
+        val end = query + "\uf8ff"
         val snapshot = firestore.collection("profiles")
-            .orderBy(FieldPath.documentId())
-            .startAt(searchQuery.lowercase())
-            .endAt(end.lowercase())
+            .whereGreaterThanOrEqualTo(FieldPath.documentId(), query)
+            .whereLessThanOrEqualTo(FieldPath.documentId(), end)
             .limit(20)
             .get()
             .await()
         return snapshot.documents.mapNotNull { doc ->
-            doc.data?.let { Profile.fromMap(doc.id, it) }
+            Profile.fromMap(doc.id, doc.data ?: return@mapNotNull null)
         }
     }
 

@@ -26,3 +26,10 @@
 
 # MWA (Mobile Wallet Adapter)
 -keep class com.solana.mobilewalletadapter.** { *; }
+
+# Firestore data models — prevent obfuscation of field names used in toMap()/fromMap()
+-keep class com.w3nto.app.data.model.** { *; }
+
+# Coil image loading
+-dontwarn coil.**
+-keep class coil.** { *; }

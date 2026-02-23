@@ -8,8 +8,20 @@ service cloud.firestore {
       allow read: if true;
       allow create: if request.auth != null
         && request.resource.data.uid == request.auth.uid
-        && username.matches('^[a-z0-9_]{3,30}$');
-      allow update, delete: if request.auth != null
+        && username.matches('^[a-z0-9_]{3,30}$')
+        && request.resource.data.displayName is string
+        && request.resource.data.displayName.size() <= 50
+        && request.resource.data.bio is string
+        && request.resource.data.bio.size() <= 300
+        && request.resource.data.walletAddress is string
+        && request.resource.data.walletAddress.size() >= 32
+        && request.resource.data.walletAddress.size() <= 44;
+      allow update: if request.auth != null
+        && resource.data.uid == request.auth.uid
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['uid']))
+        && request.resource.data.displayName.size() <= 50
+        && request.resource.data.bio.size() <= 300;
+      allow delete: if request.auth != null
         && resource.data.uid == request.auth.uid;
 
       // Pages subcollection

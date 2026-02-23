@@ -196,7 +196,7 @@ function WalletAuthBridge({ children }: { children: ReactNode }) {
 }
 
 export function WalletProvider({ children }: { children: ReactNode }) {
-  const endpoint = useMemo(() => clusterApiUrl("devnet"), []);
+  const endpoint = useMemo(() => clusterApiUrl("mainnet-beta"), []);
   const walletAdapters = useMemo(
     () => [new PhantomWalletAdapter(), new SolflareWalletAdapter()],
     []

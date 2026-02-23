@@ -95,7 +95,7 @@ export default function Dashboard() {
         if (!cancelled) {
           setProfile(userProfile);
           setCurrentPageId(userProfile.defaultPageId || userProfile.pages[0]?.id || "");
-          if (!originalUsernameRef.current) {
+          if (originalUsernameRef.current === null) {
             originalUsernameRef.current = userProfile.username;
           }
         }
@@ -165,6 +165,17 @@ export default function Dashboard() {
 
   // Keep addressRef in sync
   useEffect(() => { addressRef.current = address; }, [address]);
+
+  // Warn before closing tab with unsaved changes
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (dirtyPagesRef.current.size > 0 || dirtyBlocksRef.current.size > 0) {
+        e.preventDefault();
+      }
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, []);
 
   const currentPage = profile?.pages.find((p) => p.id === currentPageId);
 
