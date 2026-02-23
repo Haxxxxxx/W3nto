@@ -197,6 +197,11 @@ class MyProfileViewModel @Inject constructor(
             return
         }
 
+        if (username in RESERVED_USERNAMES) {
+            _uiState.update { it.copy(usernameError = "This username is reserved") }
+            return
+        }
+
         viewModelScope.launch {
             _uiState.update { it.copy(isCheckingUsername = true, usernameError = null) }
             profileRepository.isUsernameAvailable(username).fold(
@@ -216,7 +221,7 @@ class MyProfileViewModel @Inject constructor(
                     )
                     profileRepository.saveProfile(username, newProfile).fold(
                         onSuccess = {
-                            profileRepository.createWalletLookup(uid, username)
+                            profileRepository.createWalletLookup(uid, username, uid)
                             _uiState.update {
                                 it.copy(
                                     profile = newProfile,
@@ -287,5 +292,15 @@ class MyProfileViewModel @Inject constructor(
 
     fun clearSuccessMessage() {
         _uiState.update { it.copy(successMessage = null) }
+    }
+
+    companion object {
+        private val RESERVED_USERNAMES = setOf(
+            "dashboard", "settings", "admin", "api", "auth",
+            "login", "signup", "register", "profile", "discover",
+            "favorites", "onboarding", "connect", "wallet",
+            "about", "help", "support", "terms", "privacy",
+            "app", "www", "mail", "ftp", "cdn", "static"
+        )
     }
 }

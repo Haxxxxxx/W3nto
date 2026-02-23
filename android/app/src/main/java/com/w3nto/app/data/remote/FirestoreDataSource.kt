@@ -1,8 +1,10 @@
 package com.w3nto.app.data.remote
 
 import com.google.firebase.firestore.FieldPath
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
+import com.google.firebase.firestore.SetOptions
 import com.w3nto.app.data.model.BentoPage
 import com.w3nto.app.data.model.Block
 import com.w3nto.app.data.model.FavoritePage
@@ -123,10 +125,17 @@ class FirestoreDataSource @Inject constructor(
         return !doc.exists()
     }
 
-    suspend fun createWalletLookup(walletAddress: String, username: String) {
+    suspend fun createWalletLookup(walletAddress: String, username: String, uid: String) {
         firestore.collection("wallets")
             .document(walletAddress)
-            .set(mapOf("username" to username))
+            .set(
+                mapOf(
+                    "username" to username,
+                    "uid" to uid,
+                    "updatedAt" to FieldValue.serverTimestamp()
+                ),
+                SetOptions.merge()
+            )
             .await()
     }
 

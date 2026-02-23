@@ -1,19 +1,4 @@
 {
-  "indexes": [
-    {
-      "collectionGroup": "profiles",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "favorites",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "savedAt", "order": "DESCENDING" }
-      ]
-    }
-  ],
+  "indexes": [],
   "fieldOverrides": []
 }

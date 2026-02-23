@@ -1,5 +1,5 @@
 import { useParams, useNavigate, Link } from "react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Profile, BentoPage, Block } from "../types";
 import { getProfileByUsername } from "../utils/storage";
 import { ExternalLink, Grid3x3, ArrowLeft, Share2 } from "lucide-react";
@@ -16,6 +16,15 @@ export default function UserProfile() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [columns, setColumns] = useState(() =>
+    typeof window !== "undefined" && window.innerWidth >= 768 ? 4 : 2
+  );
+
+  useEffect(() => {
+    const handler = () => setColumns(window.innerWidth >= 768 ? 4 : 2);
+    window.addEventListener("resize", handler);
+    return () => window.removeEventListener("resize", handler);
+  }, []);
 
   useEffect(() => {
     if (!username) return;
@@ -60,10 +69,10 @@ export default function UserProfile() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "#0a0a0a" }}>
         <div className="text-center">
-          <div className="size-12 border-4 border-gray-200 border-t-purple-500 rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading profile...</p>
+          <div className="size-12 border-4 border-gray-700 border-t-purple-500 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-400">Loading profile...</p>
         </div>
       </div>
     );
@@ -137,8 +146,9 @@ export default function UserProfile() {
       return <img src={block.iconImage} alt="icon" className="size-12 rounded-lg object-cover mb-2" />;
     }
     if (block.type === "social" && block.socialPlatform && block.socialPlatform !== "custom") {
-      const Icon = socialPlatforms[block.socialPlatform].icon;
-      return <Icon className="size-12 mb-2" />;
+      const platform = socialPlatforms[block.socialPlatform];
+      const Icon = platform.icon;
+      return <Icon className="size-12 mb-2" style={{ color: platform.color }} />;
     }
     if (block.icon) {
       return <div className="text-4xl mb-2">{block.icon}</div>;
@@ -255,7 +265,7 @@ export default function UserProfile() {
             />
           );
         }
-        if (musicUrl.includes("soundcloud.com")) {
+        if ((() => { try { return new URL(musicUrl).hostname.endsWith("soundcloud.com"); } catch { return false; } })()) {
           return (
             <iframe
               src={`https://w.soundcloud.com/player/?url=${encodeURIComponent(musicUrl)}&color=%23ff5500&auto_play=false&hide_related=true&show_comments=false&show_user=true&show_reposts=false&show_teaser=false&visual=true`}
@@ -350,7 +360,9 @@ export default function UserProfile() {
 
           <button
             onClick={() => {
-              const url = `${window.location.origin}/${profile.username}/${currentPage.slug}`;
+              const url = (profile.pages.length <= 1 || currentPage.id === profile.defaultPageId)
+                ? `${window.location.origin}/${profile.username}`
+                : `${window.location.origin}/${profile.username}/${currentPage.slug}`;
               setShareUrl(url);
             }}
             className="mt-4 px-4 py-2 rounded-full text-sm inline-flex items-center gap-2 transition-all hover:scale-105"
@@ -398,13 +410,13 @@ export default function UserProfile() {
                   block.url ? "cursor-pointer" : ""
                 }`}
                 style={{
-                  gridColumn: `span ${block.width}`,
+                  gridColumn: `span ${Math.min(block.width, columns)}`,
                   gridRow: `span ${block.height}`,
                   ...getBlockBackground(block),
                   color: block.textColor,
                   borderRadius: currentPage.theme.borderRadius,
                 }}
-                onClick={() => handleBlockClick(block)}
+                onClick={() => { if (block.type === "video" || block.type === "music") return; handleBlockClick(block); }}
               >
                 {renderBlockContent(block)}
 

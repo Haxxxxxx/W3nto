@@ -25,7 +25,7 @@ class ProfileRepository @Inject constructor(
         firestoreDataSource.isUsernameAvailable(username)
     }
 
-    suspend fun createWalletLookup(walletAddress: String, username: String): Result<Unit> = runCatching {
-        firestoreDataSource.createWalletLookup(walletAddress, username)
+    suspend fun createWalletLookup(walletAddress: String, username: String, uid: String): Result<Unit> = runCatching {
+        firestoreDataSource.createWalletLookup(walletAddress, username, uid)
     }
 }

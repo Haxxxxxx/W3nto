@@ -119,7 +119,7 @@ export const verifyWalletSignature = functions.https.onCall(
     }
 
     // Verify the message contains the correct wallet address
-    const walletMatch = message.match(/Wallet:\s*([a-zA-Z0-9]+)/);
+    const walletMatch = message.match(/[Ww]allet:\s*([a-zA-Z0-9]+)/);
     if (!walletMatch || walletMatch[1] !== publicKey) {
       throw new functions.https.HttpsError(
         "invalid-argument",

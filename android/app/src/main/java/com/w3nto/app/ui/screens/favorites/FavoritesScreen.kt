@@ -91,6 +91,7 @@ fun FavoritesScreen(
                 message = errorMessage,
                 duration = SnackbarDuration.Short
             )
+            viewModel.clearError()
         }
     }
 }

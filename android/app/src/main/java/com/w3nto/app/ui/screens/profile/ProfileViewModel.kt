@@ -153,9 +153,20 @@ class ProfileViewModel @Inject constructor(
                 )
                 favoritesRepository.addPageFavorite(userId, favorite)
             }
-            result.onFailure {
+            result.onFailure { e ->
+                android.util.Log.e("ProfileViewModel", "Failed to toggle favorite", e)
                 // Revert on failure
-                _uiState.value = _uiState.value.copy(isFavorited = currentlyFavorited)
+                _uiState.value = _uiState.value.copy(
+                    isFavorited = currentlyFavorited,
+                    error = "Failed to update favorite: ${e.message}"
+                )
+                // Auto-clear error after 3 seconds
+                viewModelScope.launch {
+                    delay(3000)
+                    if (_uiState.value.error?.startsWith("Failed to update") == true) {
+                        _uiState.value = _uiState.value.copy(error = null)
+                    }
+                }
             }
         }
     }

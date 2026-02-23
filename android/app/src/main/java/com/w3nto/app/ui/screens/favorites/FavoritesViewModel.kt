@@ -88,6 +88,10 @@ class FavoritesViewModel @Inject constructor(
         }
     }
 
+    fun clearError() {
+        _uiState.value = _uiState.value.copy(error = null)
+    }
+
     fun removeFavorite(username: String, pageId: String) {
         val userId = auth.currentUser?.uid ?: return
         viewModelScope.launch {

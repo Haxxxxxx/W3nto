@@ -39,7 +39,7 @@ class PhantomWallet @Inject constructor() {
             .appendQueryParameter("app_url", APP_URL)
             .appendQueryParameter("dapp_encryption_public_key", dappPubKeyBase58)
             .appendQueryParameter("redirect_link", "$REDIRECT_SCHEME://$REDIRECT_HOST_CONNECT")
-            .appendQueryParameter("cluster", "devnet")
+            .appendQueryParameter("cluster", "mainnet-beta")
             .build()
     }
 

@@ -1,6 +1,7 @@
 package com.w3nto.app.data.model
 
 import com.google.firebase.Timestamp
+import com.google.firebase.firestore.FieldValue
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 
@@ -21,8 +22,9 @@ data class BentoPage(
         put("slug", slug)
         put("theme", theme?.toMap())
         put("isFavorite", isFavorite)
-        put("createdAt", createdAt ?: Timestamp.now())
-        put("updatedAt", Timestamp.now())
+        put("position", position)
+        put("createdAt", createdAt ?: FieldValue.serverTimestamp())
+        put("updatedAt", FieldValue.serverTimestamp())
     }
 
     companion object {

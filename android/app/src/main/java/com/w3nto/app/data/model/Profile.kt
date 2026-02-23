@@ -1,6 +1,7 @@
 package com.w3nto.app.data.model
 
 import com.google.firebase.Timestamp
+import com.google.firebase.firestore.FieldValue
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 
@@ -28,8 +29,8 @@ data class Profile(
         put("theme", theme.toMap())
         put("defaultPageId", defaultPageId)
         put("showWallet", showWallet)
-        put("createdAt", createdAt ?: Timestamp.now())
-        put("updatedAt", Timestamp.now())
+        put("createdAt", createdAt ?: FieldValue.serverTimestamp())
+        put("updatedAt", FieldValue.serverTimestamp())
     }
 
     companion object {

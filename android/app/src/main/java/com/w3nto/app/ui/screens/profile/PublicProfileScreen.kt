@@ -48,6 +48,7 @@ fun PublicProfileScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+    val snackbarHostState = remember { SnackbarHostState() }
 
     // Use page theme if available, otherwise profile theme, otherwise default
     val activeTheme = uiState.currentPage?.theme ?: uiState.profile?.theme ?: Theme()
@@ -56,7 +57,18 @@ fun PublicProfileScreen(
     val primaryColor = remember(activeTheme.primaryColor) { parseColor(activeTheme.primaryColor) }
     val cardBg = remember(activeTheme.cardBackground) { parseColor(activeTheme.cardBackground) }
 
+    // Show snackbar for favorites errors
+    uiState.error?.let { errorMessage ->
+        LaunchedEffect(errorMessage) {
+            snackbarHostState.showSnackbar(
+                message = errorMessage,
+                duration = SnackbarDuration.Short
+            )
+        }
+    }
+
     Scaffold(
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("@$username", color = textColor) },

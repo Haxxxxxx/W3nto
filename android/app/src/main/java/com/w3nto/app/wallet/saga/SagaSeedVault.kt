@@ -20,7 +20,7 @@ class SagaSeedVault @Inject constructor(
     companion object {
         private const val APP_IDENTITY_NAME = "W3nto"
         private val APP_IDENTITY_URI = Uri.parse("https://w3nto.app")
-        private val APP_IDENTITY_ICON = Uri.parse("https://w3nto.app/favicon.ico")
+        private val APP_IDENTITY_ICON = Uri.parse("/favicon.ico")
     }
 
     private val connectionIdentity = ConnectionIdentity(
@@ -36,7 +36,7 @@ class SagaSeedVault @Inject constructor(
      * Returns the base58-encoded public key.
      */
     suspend fun authorize(sender: ActivityResultSender): String {
-        mwa.rpcCluster = RpcCluster.Devnet
+        mwa.rpcCluster = RpcCluster.MainnetBeta
 
         val block: suspend (AdapterOperations, AuthorizationResult) -> ByteArray =
             { _, authResult -> authResult.publicKey }
@@ -55,7 +55,7 @@ class SagaSeedVault @Inject constructor(
      * Returns the base58-encoded signature.
      */
     suspend fun signMessage(sender: ActivityResultSender, message: ByteArray): String {
-        mwa.rpcCluster = RpcCluster.Devnet
+        mwa.rpcCluster = RpcCluster.MainnetBeta
 
         val block: suspend (AdapterOperations, AuthorizationResult) -> ByteArray =
             { ops, authResult ->
