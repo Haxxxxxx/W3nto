@@ -2,8 +2,12 @@ package com.w3nto.app.ui.components
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Explore
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.Explore
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -22,7 +26,9 @@ data class BottomNavItem(
 
 val bottomNavItems = listOf(
     BottomNavItem("Discover", Screen.Discover.route, Icons.Filled.Explore, Icons.Outlined.Explore),
-    BottomNavItem("Favorites", Screen.Favorites.route, Icons.Filled.Star, Icons.Outlined.StarBorder)
+    BottomNavItem("Favorites", Screen.Favorites.route, Icons.Filled.Star, Icons.Outlined.StarBorder),
+    BottomNavItem("Profile", Screen.MyProfile.route, Icons.Filled.Person, Icons.Outlined.Person),
+    BottomNavItem("Settings", Screen.Settings.route, Icons.Filled.Settings, Icons.Outlined.Settings)
 )
 
 @Composable

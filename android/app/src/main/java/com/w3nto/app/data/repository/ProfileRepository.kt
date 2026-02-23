@@ -12,4 +12,20 @@ class ProfileRepository @Inject constructor(
     suspend fun getProfile(username: String): Result<Profile?> = runCatching {
         firestoreDataSource.getProfile(username)
     }
+
+    suspend fun getProfileByUid(uid: String): Result<Profile?> = runCatching {
+        firestoreDataSource.getProfileByUid(uid)
+    }
+
+    suspend fun saveProfile(username: String, profile: Profile): Result<Unit> = runCatching {
+        firestoreDataSource.saveProfile(username, profile)
+    }
+
+    suspend fun isUsernameAvailable(username: String): Result<Boolean> = runCatching {
+        firestoreDataSource.isUsernameAvailable(username)
+    }
+
+    suspend fun createWalletLookup(walletAddress: String, username: String): Result<Unit> = runCatching {
+        firestoreDataSource.createWalletLookup(walletAddress, username)
+    }
 }

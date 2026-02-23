@@ -5,6 +5,8 @@ sealed class Screen(val route: String) {
     data object ConnectWallet : Screen("connect_wallet")
     data object Discover : Screen("discover")
     data object Favorites : Screen("favorites")
+    data object MyProfile : Screen("my_profile")
+    data object Settings : Screen("settings")
     data class PublicProfile(
         val username: String = "{username}",
         val pageSlug: String? = null

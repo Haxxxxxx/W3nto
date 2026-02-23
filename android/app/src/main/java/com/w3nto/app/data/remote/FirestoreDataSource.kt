@@ -98,6 +98,112 @@ class FirestoreDataSource @Inject constructor(
         }
     }
 
+    // ── Profile Writes ──
+
+    suspend fun saveProfile(username: String, profile: Profile) {
+        firestore.collection("profiles")
+            .document(username)
+            .set(profile.toMap())
+            .await()
+    }
+
+    suspend fun getProfileByUid(uid: String): Profile? {
+        val snapshot = firestore.collection("profiles")
+            .whereEqualTo("uid", uid)
+            .limit(1)
+            .get()
+            .await()
+        return snapshot.documents.firstOrNull()?.let { doc ->
+            doc.data?.let { Profile.fromMap(doc.id, it) }
+        }
+    }
+
+    suspend fun isUsernameAvailable(username: String): Boolean {
+        val doc = firestore.collection("profiles").document(username).get().await()
+        return !doc.exists()
+    }
+
+    suspend fun createWalletLookup(walletAddress: String, username: String) {
+        firestore.collection("wallets")
+            .document(walletAddress)
+            .set(mapOf("username" to username))
+            .await()
+    }
+
+    // ── Page Writes ──
+
+    suspend fun createPage(username: String, page: BentoPage): String {
+        val ref = firestore.collection("profiles")
+            .document(username)
+            .collection("pages")
+            .add(page.toMap())
+            .await()
+        return ref.id
+    }
+
+    suspend fun updatePage(username: String, pageId: String, page: BentoPage) {
+        firestore.collection("profiles")
+            .document(username)
+            .collection("pages")
+            .document(pageId)
+            .set(page.toMap())
+            .await()
+    }
+
+    suspend fun deletePage(username: String, pageId: String) {
+        val blocks = firestore.collection("profiles")
+            .document(username)
+            .collection("pages")
+            .document(pageId)
+            .collection("blocks")
+            .get()
+            .await()
+        val batch = firestore.batch()
+        blocks.documents.forEach { batch.delete(it.reference) }
+        batch.delete(
+            firestore.collection("profiles")
+                .document(username)
+                .collection("pages")
+                .document(pageId)
+        )
+        batch.commit().await()
+    }
+
+    // ── Block Writes ──
+
+    suspend fun createBlock(username: String, pageId: String, block: Block): String {
+        val ref = firestore.collection("profiles")
+            .document(username)
+            .collection("pages")
+            .document(pageId)
+            .collection("blocks")
+            .add(block.toMap())
+            .await()
+        return ref.id
+    }
+
+    suspend fun updateBlock(username: String, pageId: String, block: Block) {
+        firestore.collection("profiles")
+            .document(username)
+            .collection("pages")
+            .document(pageId)
+            .collection("blocks")
+            .document(block.id)
+            .set(block.toMap())
+            .await()
+    }
+
+    suspend fun deleteBlock(username: String, pageId: String, blockId: String) {
+        firestore.collection("profiles")
+            .document(username)
+            .collection("pages")
+            .document(pageId)
+            .collection("blocks")
+            .document(blockId)
+            .delete()
+            .await()
+    }
+
     // ── Page-Level Favorites ──
 
     suspend fun getPageFavorites(userId: String): List<FavoritePage> {

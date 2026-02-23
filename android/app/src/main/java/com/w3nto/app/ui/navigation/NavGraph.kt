@@ -20,13 +20,17 @@ import com.w3nto.app.ui.screens.auth.ConnectWalletScreen
 import com.w3nto.app.ui.screens.discover.DiscoverScreen
 import com.w3nto.app.ui.screens.favorites.FavoritesScreen
 import com.w3nto.app.ui.screens.landing.LandingScreen
+import com.w3nto.app.ui.screens.myprofile.MyProfileScreen
 import com.w3nto.app.ui.screens.profile.PublicProfileScreen
+import com.w3nto.app.ui.screens.settings.SettingsScreen
 import com.w3nto.app.wallet.WalletManager
 import kotlinx.coroutines.flow.StateFlow
 
 private val bottomNavRoutes = setOf(
     Screen.Discover.route,
-    Screen.Favorites.route
+    Screen.Favorites.route,
+    Screen.MyProfile.route,
+    Screen.Settings.route
 )
 
 @Composable
@@ -49,8 +53,7 @@ fun NavGraph(
         Screen.Landing.route
     }
 
-    // Auto-navigate to Discover when auth completes while on Landing/ConnectWallet
-    // Skip if a deep link is pending — the deep link effect will handle navigation
+    // Handle auth state changes — login and logout navigation
     LaunchedEffect(firebaseUser) {
         if (firebaseUser != null) {
             val route = navController.currentDestination?.route
@@ -61,13 +64,20 @@ fun NavGraph(
                     }
                 }
             }
+        } else {
+            // Signed out — navigate back to Landing if on any authenticated route
+            val route = navController.currentDestination?.route
+            if (route != null && route != Screen.Landing.route && route != Screen.ConnectWallet.route) {
+                navController.navigate(Screen.Landing.route) {
+                    popUpTo(0) { inclusive = true }
+                }
+            }
         }
     }
 
     // Handle deep link navigation — wait for NavHost to initialize before navigating
     LaunchedEffect(deepLinkRoute) {
         val route = deepLinkRoute ?: return@LaunchedEffect
-        // Wait for NavHost to initialize
         while (navController.currentDestination == null) {
             kotlinx.coroutines.delay(50)
         }
@@ -133,6 +143,18 @@ fun NavGraph(
                         )
                     }
                 )
+            }
+
+            composable(Screen.MyProfile.route) {
+                MyProfileScreen(
+                    onViewProfile = { username ->
+                        navController.navigate(Screen.PublicProfile().createRoute(username))
+                    }
+                )
+            }
+
+            composable(Screen.Settings.route) {
+                SettingsScreen()
             }
 
             composable(
