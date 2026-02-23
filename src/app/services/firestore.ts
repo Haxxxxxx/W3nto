@@ -115,7 +115,6 @@ export async function savePage(username: string, page: BentoPage): Promise<void>
   if (!uid) throw new Error("Not authenticated");
 
   const pageRef = doc(db, "profiles", username, "pages", page.id);
-  const existing = await getDoc(pageRef);
 
   const pageData: Record<string, unknown> = {
     name: page.name,
@@ -124,10 +123,6 @@ export async function savePage(username: string, page: BentoPage): Promise<void>
     isFavorite: page.isFavorite,
     updatedAt: serverTimestamp(),
   };
-
-  if (!existing.exists()) {
-    pageData.createdAt = serverTimestamp();
-  }
 
   await setDoc(pageRef, pageData, { merge: true });
 
@@ -193,36 +188,32 @@ export async function saveBlock(
   block: Block
 ): Promise<void> {
   const blockRef = doc(db, "profiles", username, "pages", pageId, "blocks", block.id);
-  const existing = await getDoc(blockRef);
 
   const blockData: Record<string, unknown> = {
     type: block.type,
-      title: block.title,
-      content: block.content,
-      url: block.url ?? null,
-      imageUrl: block.imageUrl ?? null,
-      icon: block.icon ?? null,
-      iconImage: block.iconImage ?? null,
-      bgType: block.bgType,
-      bgColor: block.bgColor ?? null,
-      bgGradient: block.bgGradient ?? null,
-      bgImage: block.bgImage ?? null,
-      textColor: block.textColor ?? null,
-      width: block.width,
-      height: block.height,
-      position: block.position,
-      tokenAddress: block.tokenAddress ?? null,
-      chainId: block.chainId ?? null,
-      nftCollection: block.nftCollection ?? null,
-      nftTokenId: block.nftTokenId ?? null,
-      nftName: block.nftName ?? null,
+    title: block.title,
+    content: block.content,
+    url: block.url ?? null,
+    imageUrl: block.imageUrl ?? null,
+    icon: block.icon ?? null,
+    iconImage: block.iconImage ?? null,
+    bgType: block.bgType,
+    bgColor: block.bgColor ?? null,
+    bgGradient: block.bgGradient ?? null,
+    bgImage: block.bgImage ?? null,
+    textColor: block.textColor ?? null,
+    width: block.width,
+    height: block.height,
+    position: block.position,
+    tokenAddress: block.tokenAddress ?? null,
+    chainId: block.chainId ?? null,
+    nftCollection: block.nftCollection ?? null,
+    nftTokenId: block.nftTokenId ?? null,
+    nftName: block.nftName ?? null,
     nftImage: block.nftImage ?? null,
     socialPlatform: block.socialPlatform ?? null,
+    updatedAt: serverTimestamp(),
   };
-
-  if (!existing.exists()) {
-    blockData.createdAt = serverTimestamp();
-  }
 
   await setDoc(blockRef, blockData, { merge: true });
 }

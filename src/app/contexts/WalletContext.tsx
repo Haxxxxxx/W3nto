@@ -188,7 +188,7 @@ function WalletAuthBridge({ children }: { children: ReactNode }) {
         <WalletPickerModal
           wallets={wallets}
           onSelect={handleWalletSelect}
-          onClose={() => setShowPicker(false)}
+          onClose={() => { setShowPicker(false); userInitiatedRef.current = false; }}
         />
       )}
     </WalletContext.Provider>

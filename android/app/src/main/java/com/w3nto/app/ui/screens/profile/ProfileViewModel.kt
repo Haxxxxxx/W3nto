@@ -16,6 +16,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -109,7 +110,7 @@ class ProfileViewModel @Inject constructor(
     }
 
     fun selectPage(page: BentoPage) {
-        _uiState.value = _uiState.value.copy(currentPage = page, blocks = emptyList(), isFavorited = false)
+        _uiState.value = _uiState.value.copy(currentPage = page, blocks = emptyList(), isFavorited = false, isLoading = true)
         viewModelScope.launch {
             val blocksResult = blockRepository.getBlocks(username, page.id)
             _uiState.value = _uiState.value.copy(
@@ -123,6 +124,10 @@ class ProfileViewModel @Inject constructor(
     fun toggleFavorite() {
         val userId = auth.currentUser?.uid ?: run {
             _uiState.value = _uiState.value.copy(error = "Connect your wallet to save favorites")
+            viewModelScope.launch {
+                delay(3000)
+                _uiState.value = _uiState.value.copy(error = null)
+            }
             return
         }
         val currentPage = _uiState.value.currentPage ?: return

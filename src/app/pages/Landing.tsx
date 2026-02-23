@@ -181,7 +181,7 @@ export default function Landing() {
         <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-3xl p-16 text-center text-white">
           <h2 className="text-4xl mb-6">Ready to build your Web3 presence?</h2>
           <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
-            Join thousands of creators, developers, and Web3 enthusiasts sharing their links.
+            Start building your Web3 profile today — connect your wallet and go live in minutes.
           </p>
           <button
             onClick={handleGetStarted}
@@ -205,13 +205,8 @@ export default function Landing() {
 
       {/* Footer */}
       <footer className="border-t border-gray-200">
-        <div className="max-w-7xl mx-auto px-6 py-8 flex items-center justify-between text-sm text-gray-600">
+        <div className="max-w-7xl mx-auto px-6 py-8 text-sm text-gray-600">
           <div>© 2026 W3nto. Built for the decentralized web.</div>
-          <div className="flex items-center gap-6">
-            <span>Twitter</span>
-            <span>Discord</span>
-            <span>GitHub</span>
-          </div>
         </div>
       </footer>
     </div>

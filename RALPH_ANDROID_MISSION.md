@@ -1,16 +1,16 @@
-# Ralph's Mission: W3nto — Round 2 Audit Fixes
+# Ralph's Mission: W3nto — Round 4 Audit Fixes
 
 ## Your Goal
-Three comprehensive audits (Android, Web, Security) identified new bugs beyond what the first round of fixes addressed. Work through all 5 phases in order. Verify builds after each phase. Commit once at the end.
+A fourth audit identified 21 net-new issues beyond what rounds 1, 2, and 3 addressed. Work through all 5 phases in order. Verify builds after each phase. Commit once at the end.
 
 Read `CLAUDE.md` for full architecture context.
 
 ---
 
 ## What Was Already Fixed (DO NOT RE-DO)
-Commit `2812f48` already completed these tasks. Skip them:
+Rounds 1, 2, and 3 (commits `2812f48`, `f91a78f`, and subsequent) already completed these. Skip them entirely:
 - Firestore rules: uid check on create for profiles and wallets
-- Cloud Function: unconditional timestamp check (throws if no timestamp in message)
+- Cloud Function: unconditional timestamp check
 - URL validation on block click in UserProfile.tsx
 - Anonymous auth disabled in firebase.json
 - Block/page deletion now calls Firestore (handleDeleteBlock, handleDeletePage)
@@ -22,830 +22,751 @@ Commit `2812f48` already completed these tasks. Skip them:
 - Cache-Control headers in firebase.json
 - ThemeEditor `any` type fixed
 - SagaSeedVault: uses authResult.publicKey (not ByteArray(0))
-- DiscoverRepository: @Volatile on lastDocumentId
+- DiscoverRepository: @Volatile on lastDocumentId (replaced by Mutex in round 2)
 - parseColor wrapped in remember() in PublicProfileScreen, ProfileHeader, PageSelector
 - Wallet mapping write format aligned (username + uid + updatedAt)
 - CLAUDE.md auth message format updated
 - onProfileSnapshot dead function deleted from firestore.ts
+- BentoGrid: guard against zero availableWidth
+- FirestoreDataSource: `doc.data!!` force-unwrap fixed in getPages and getBlocks
+- WalletManager: safe cast for Cloud Function response
+- SagaSeedVault: guard against empty signedPayloads
+- Legacy favorites methods removed (getFavorites/addFavorite/removeFavorite/isFavorited)
+- searchProfiles: fixed to use FieldPath.documentId()
+- Firestore rules: username format validation added
+- Firebase Hosting: security headers added (X-Frame-Options, HSTS, etc.)
+- Cloud Function: publicKey and signature byte-length validation
+- ConnectWalletScreen: removed double-navigation LaunchedEffect
+- FavoritesScreen: fixed double Scaffold padding
+- ProfileViewModel: error shown when unauthenticated user taps favorite
+- NavGraph: deep link navigation wrapped in try/catch with 100ms delay
+- DiscoverRepository: @Volatile replaced with Mutex
+- WalletContext: wallet adapters wired (Phantom + Solflare)
+- UserProfile: false "not found" for zero-page profiles separated
+- Dashboard: stale closure in debounced save fixed with saveVersionRef
+- Dashboard: saveTimeoutRef cleanup on unmount added
+- Dashboard: duplicate page slugs fixed (Date.now() slug)
+- WalletContext: signOut awaited with .catch()
+- socialPlatforms.ts: React import and ComponentType typed correctly
+- ProfileEditor: avatar URL validation (https:// only)
+- Dashboard: block position renormalization after delete
+- AndroidManifest: allowBackup set to false
+- MainActivity: deep link path segment validation and length clamping
+- ConnectWalletScreen: removed unused onConnected callback parameter
+- WalletManager: removed unused firestore constructor parameter
+- ConnectWalletScreen: clearError() called at start of wallet button clicks
+- FavoritesScreen/NavGraph: malformed route fixed when pageSlug is empty
+- ProfileViewModel: isLoading no longer set during page switch (Round 3 version — see Round 4 task 4 which RE-ADDS it intentionally)
+- TextBlock: maxLines = 6 added for TextOverflow.Ellipsis
+- PhantomWallet: removed unused android.util.Base64 import
+- AuthRepository: dead signInAnonymously() method removed
+- StorageRepository and StorageDataSource deleted (viewer-only app)
+- ProfileRepository: write-only dead methods removed (saveProfile, isUsernameAvailable, getProfileByWallet)
+- PageRepository: savePage and deletePage removed
+- BlockRepository: saveBlock and deleteBlock removed
+- FirestoreDataSource: write methods with no remaining callers removed
+- AppModule: redundant Context binding deleted
+- Dashboard: user-visible error feedback for delete failures (toast.error)
+- UserProfile: "profile not found" separated from "profile has no pages"
+- Dashboard: window.confirm() before block delete
+- Dashboard: page slug collision after delete fixed
+- WalletContext: autoConnect={false}
+- WalletContext: disconnect awaits signOut
+- Landing: dead href="#" social links removed
 
 ---
 
 ## Current State
-The codebase is in a solid state after round 1. The new findings from three deep audits are categorized below. All are net-new issues not touched by round 1.
+The codebase has been hardened through three full rounds. The new findings from this fourth audit are categorized below. All are net-new issues not addressed in rounds 1, 2, or 3.
+
+For tasks marked **"verify first"** — read the file before editing and skip the task if the fix is already applied.
 
 ---
 
-## Phase 1: P0 Crashes and Data Corruption (Android)
+## Phase 1: Android Fixes (9 tasks)
 
-### Task 1.1: BentoGrid — Guard against zero availableWidth crash
-**File:** `android/app/src/main/java/com/w3nto/app/ui/components/BentoGrid.kt`
-
-The layout lambda calculates `colWidth = (availableWidth - ...) / GRID_COLUMNS` without checking that `availableWidth > 0`. When the composable is first placed in an unbounded container or during first composition, this can produce zero or negative child widths that crash on certain API levels.
-
-Find the `Layout { measurables, constraints ->` block. At the very top of the layout lambda, before the `colWidth` calculation, add:
-
-```kotlin
-) { measurables, constraints ->
-    val availableWidth = constraints.maxWidth
-    if (availableWidth <= 0) {
-        layout(0, 0) {}
-        return@Layout
-    }
-    val colWidth = (availableWidth - (GRID_COLUMNS - 1) * gapPx) / GRID_COLUMNS
-```
-
-The current code has:
-```kotlin
-) { measurables, constraints ->
-    val availableWidth = constraints.maxWidth
-    val colWidth = (availableWidth - (GRID_COLUMNS - 1) * gapPx) / GRID_COLUMNS
-```
-
-Replace those two lines with the three-line version that includes the early return.
-
-**Verify:** Code compiles — `cd android && ./gradlew assembleDebug` passes.
-
----
-
-### Task 1.2: FirestoreDataSource — Fix `doc.data!!` force-unwrap in getPages and getBlocks
-**File:** `android/app/src/main/java/com/w3nto/app/data/remote/FirestoreDataSource.kt`
-
-`getPages` and `getBlocks` both use `it.data!!` without null-checking. Tombstoned documents can briefly have null data during Firestore operations, which crashes the app.
-
-In `getPages`, replace:
-```kotlin
-return snapshot.documents.map { BentoPage.fromMap(it.id, it.data!!) }
-```
-With:
-```kotlin
-return snapshot.documents.mapNotNull { doc ->
-    doc.data?.let { BentoPage.fromMap(doc.id, it) }
-}
-```
-
-In `getBlocks`, replace:
-```kotlin
-return snapshot.documents.map { Block.fromMap(it.id, it.data!!) }
-```
-With:
-```kotlin
-return snapshot.documents.mapNotNull { doc ->
-    doc.data?.let { Block.fromMap(doc.id, it) }
-}
-```
-
-**Verify:** `cd android && ./gradlew assembleDebug` passes.
-
----
-
-### Task 1.3: WalletManager — Safe cast for Cloud Function response
-**File:** `android/app/src/main/java/com/w3nto/app/wallet/WalletManager.kt`
-
-In `authenticateWithFirebase`, the current code uses unchecked casts:
-```kotlin
-@Suppress("UNCHECKED_CAST")
-val resultData = result.getData() as Map<String, Any>
-val token = resultData["token"] as String
-```
-
-If the Cloud Function returns an unexpected shape, `resultData["token"]` is null and `as String` throws `NullPointerException` with a confusing message.
-
-Replace those two lines with:
-```kotlin
-val resultData = result.getData() as? Map<*, *>
-    ?: throw IllegalStateException("Invalid response from verifyWalletSignature")
-val token = resultData["token"] as? String
-    ?: throw IllegalStateException("Missing token in auth response")
-```
-
-Remove the `@Suppress("UNCHECKED_CAST")` annotation since it is no longer needed.
-
-**Verify:** `cd android && ./gradlew assembleDebug` passes.
-
----
-
-### Task 1.4: SagaSeedVault — Guard against empty signedPayloads
+### Task 1.1: SagaSeedVault — Fix MWA 2.0 signed payload field name
 **File:** `android/app/src/main/java/com/w3nto/app/wallet/saga/SagaSeedVault.kt`
 
-The MWA `signMessages` result can have fewer payloads than requested if the wallet partially rejects signing. The current code accesses `signResult.signedPayloads[0]` directly, which throws `ArrayIndexOutOfBoundsException` if the list is empty.
+The current code accesses `signResult.signedPayloads.firstOrNull()` to get the signed message bytes. In MWA 2.0 the field on `SignMessagesResult` may be `signedMessages` instead of `signedPayloads`.
 
-Find the line:
-```kotlin
-signResult.signedPayloads[0]
-```
+Read the file and find the line that accesses the sign result. Then check what fields actually exist on the `SignMessagesResult` class by looking at the MWA clientlib import or by reading the compiler output. The access site looks like:
 
-Replace it with:
 ```kotlin
+// CURRENT (may be wrong field name):
 signResult.signedPayloads.firstOrNull()
-    ?: throw IllegalStateException("Wallet did not return a signed payload")
 ```
 
-**Verify:** `cd android && ./gradlew assembleDebug` passes.
-
----
-
-### Task 1.5: FirestoreDataSource — Remove legacy favorites methods (data corruption risk)
-**File:** `android/app/src/main/java/com/w3nto/app/data/remote/FirestoreDataSource.kt`
-**File:** `android/app/src/main/java/com/w3nto/app/data/repository/FavoritesRepository.kt`
-
-The legacy `getFavorites`, `addFavorite`, `removeFavorite`, and `isFavorited` methods in `FirestoreDataSource` write the OLD favorites schema `{ username, savedAt }` to the same `users/{uid}/favorites` collection that the new page-level favorites use. The old `addFavorite` writes documents WITHOUT the `pageId` field, so any document written via the old path will produce a `FavoritePage` with empty `pageId` when read by `getPageFavorites`. This creates broken favorites that navigate to `profile/username?page=` (blank slug).
-
-These methods are never called by any screen — only by `FavoritesRepository`, which is only called via the legacy repo methods that are also dead code.
-
-**In `FirestoreDataSource.kt`, delete these four methods entirely:**
-- `getFavorites(userId: String): List<Profile>` (lines ~188-200)
-- `addFavorite(userId: String, username: String)` (lines ~202-212)
-- `removeFavorite(userId: String, username: String)` (lines ~214-221)
-- `isFavorited(userId: String, username: String): Boolean` (lines ~223-231)
-
-**In `FavoritesRepository.kt`, delete these four methods entirely:**
-- `getFavorites(userId: String): Result<List<Profile>>`
-- `addFavorite(userId: String, username: String): Result<Unit>`
-- `removeFavorite(userId: String, username: String): Result<Unit>`
-- `isFavorited(userId: String, username: String): Result<Boolean>`
-
-Also remove `import com.w3nto.app.data.model.Profile` from `FavoritesRepository.kt` if it is no longer used after these deletions (check first).
-
-**Verify:** `cd android && ./gradlew assembleDebug` passes without compilation errors.
-
----
-
-### Task 1.6: FirestoreDataSource — Fix broken searchProfiles (queries non-existent field)
-**File:** `android/app/src/main/java/com/w3nto/app/data/remote/FirestoreDataSource.kt`
-
-`searchProfiles` queries `.orderBy("username")` but `Profile.toMap()` does NOT include a `"username"` field — it is only the document ID. This query returns zero results for all users in production.
-
-The fix is to search on `FieldPath.documentId()` instead of a field named `"username"`:
-
-Replace the entire `searchProfiles` function:
-```kotlin
-suspend fun searchProfiles(searchQuery: String): List<Profile> {
-    val end = searchQuery + "\uf8ff"
-    val snapshot = firestore.collection("profiles")
-        .orderBy("username")
-        .startAt(searchQuery.lowercase())
-        .endAt(end.lowercase())
-        .limit(20)
-        .get()
-        .await()
-    return snapshot.documents.mapNotNull { doc ->
-        doc.data?.let { Profile.fromMap(doc.id, it) }
-    }
-}
-```
-
-With:
-```kotlin
-suspend fun searchProfiles(searchQuery: String): List<Profile> {
-    val end = searchQuery + "\uf8ff"
-    val snapshot = firestore.collection("profiles")
-        .orderBy(com.google.firebase.firestore.FieldPath.documentId())
-        .startAt(searchQuery.lowercase())
-        .endAt(end.lowercase())
-        .limit(20)
-        .get()
-        .await()
-    return snapshot.documents.mapNotNull { doc ->
-        doc.data?.let { Profile.fromMap(doc.id, it) }
-    }
-}
-```
-
-**Verify:** `cd android && ./gradlew assembleDebug` passes.
-
----
-
-**Phase 1 Build Check:** Run `cd android && ./gradlew assembleDebug`. Must pass before continuing.
-
----
-
-## Phase 2: P0 Security Fixes
-
-### Task 2.1: Firestore Rules — Add username format validation
-**File:** `firestore.rules`
-
-The profile create rule currently allows any authenticated user to create a profile with any string as a username, including empty strings, 1-character names, extremely long names, or special characters. This enables spam and routing bugs.
-
-The current create rule is:
-```
-allow create: if request.auth != null
-  && request.resource.data.uid == request.auth.uid;
-```
-
-Replace it with:
-```
-allow create: if request.auth != null
-  && request.resource.data.uid == request.auth.uid
-  && username.matches('^[a-z0-9_]{3,30}$');
-```
-
-**Verify:** Run `firebase emulators:start --only firestore` briefly to confirm rules load, OR just verify the file syntax is correct by reading it back.
-
----
-
-### Task 2.2: Firebase Hosting — Add security headers
-**File:** `firebase.json`
-
-The current `firebase.json` has no security headers beyond caching. Add these headers to protect against clickjacking, MIME sniffing, and improve security posture.
-
-In the `hosting.headers` array, add a new entry at the BEGINNING (before the assetlinks.json entry):
-
-```json
-{
-  "source": "**",
-  "headers": [
-    {
-      "key": "X-Frame-Options",
-      "value": "DENY"
-    },
-    {
-      "key": "X-Content-Type-Options",
-      "value": "nosniff"
-    },
-    {
-      "key": "Referrer-Policy",
-      "value": "strict-origin-when-cross-origin"
-    },
-    {
-      "key": "Strict-Transport-Security",
-      "value": "max-age=31536000; includeSubDomains"
-    }
-  ]
-},
-```
-
-Do NOT add a CSP header — the web app uses inline styles and Tailwind which would require a complex CSP. The other four headers are safe to add without risking breakage.
-
-**Verify:** `npm run build` passes and `firebase.json` is valid JSON (check with `python3 -m json.tool firebase.json`).
-
----
-
-### Task 2.3: Cloud Function — Add publicKey length validation
-**File:** `functions/src/auth/verifyWallet.ts`
-
-The function never validates that `publicKey` is a valid Solana public key length. A valid Solana public key is a 32-byte value encoded in base58 (always 44 characters when base58-encoded). Add this validation after the base58 decode:
-
-Find the block that decodes from base58:
-```typescript
-try {
-  publicKeyBytes = bs58.decode(publicKey);
-  signatureBytes = bs58.decode(signature);
-} catch {
-  throw new functions.https.HttpsError(
-    "invalid-argument",
-    "Invalid base58 encoding for publicKey or signature"
-  );
-}
-```
-
-After the `try/catch` block, add:
-```typescript
-// Validate Solana public key length (32 bytes)
-if (publicKeyBytes.length !== 32) {
-  throw new functions.https.HttpsError(
-    "invalid-argument",
-    "Invalid public key: must be a 32-byte Solana address"
-  );
-}
-// Validate ed25519 signature length (64 bytes)
-if (signatureBytes.length !== 64) {
-  throw new functions.https.HttpsError(
-    "invalid-argument",
-    "Invalid signature: must be 64 bytes"
-  );
-}
-```
-
-**Verify:** `cd functions && npm run build` passes (or check if there's a build step — if `functions/` has a `tsconfig.json`, run `npx tsc --noEmit` from the functions directory).
-
----
-
-**Phase 2 Build Check:** `npm run build` must pass. Verify `firebase.json` is valid JSON.
-
----
-
-## Phase 3: P1 Broken Features (Android)
-
-### Task 3.1: ConnectWalletScreen — Remove double-navigation LaunchedEffect
-**File:** `android/app/src/main/java/com/w3nto/app/ui/screens/auth/ConnectWalletScreen.kt`
-
-`ConnectWalletScreen` has a `LaunchedEffect(firebaseUser)` that calls `onConnected()` whenever `firebaseUser` becomes non-null. Combined with the `LaunchedEffect(firebaseUser)` in `NavGraph.kt` that also navigates to Discover on auth, this produces two simultaneous `navController.navigate(discover)` calls, leaving an inconsistent back stack.
-
-Find and delete this entire block:
-```kotlin
-// Observe Firebase auth state for navigation
-val firebaseUser by authRepository.authStateFlow().collectAsState(initial = authRepository.currentUser)
-
-LaunchedEffect(firebaseUser) {
-    if (firebaseUser != null) {
-        onConnected()
-    }
-}
-```
-
-The auth-state-driven navigation belongs solely in `NavGraph`. The `onConnected` callback in `ConnectWalletScreen` is used by the UI button flow — do not remove the `onConnected` parameter or the button handler.
-
-After deletion, check if `authRepository` is still used in `ConnectWalletScreen`. If it is only used in the deleted block, also remove the `authRepository` parameter from the function signature, the import, and update the call site in `NavGraph.kt` accordingly. Read the full file first to check all usages.
-
-**Verify:** `cd android && ./gradlew assembleDebug` passes.
-
----
-
-### Task 3.2: FavoritesScreen — Fix double Scaffold padding
-**File:** `android/app/src/main/java/com/w3nto/app/ui/screens/favorites/FavoritesScreen.kt`
-
-`FavoritesScreen` is already rendered inside the outer `Scaffold` in `NavGraph.kt` which applies `innerPadding`. The inner `Scaffold` in `FavoritesScreen` creates a second padding layer, causing double bottom-nav padding. The `SnackbarHost` also renders offset from the screen edge.
-
-Find the inner Scaffold:
-```kotlin
-Scaffold(
-    snackbarHost = { SnackbarHost(snackbarHostState) }
-) { innerPadding ->
-    Box(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
-        // ... content ...
-    }
-}
-```
-
-Replace the entire `Scaffold { innerPadding -> Box(modifier = Modifier.padding(innerPadding)...` wrapper with a plain `Box` that positions the `SnackbarHost` at the bottom center:
+Steps:
+1. Read the file and find the exact line referencing `signedPayloads` on the sign result.
+2. In Android Studio / Gradle, the MWA clientlib is `com.solanamobile:mobile-wallet-adapter-clientlib-ktx:2.0.3`. Check the actual data class shape. The correct field in MWA 2.0 is `signedMessages`.
+3. If the field is `signedPayloads`, change it to `signedMessages`:
 
 ```kotlin
-Box(modifier = Modifier.fillMaxSize()) {
-    // ... (all the existing content: loading state, auth required state, empty state, LazyColumn) ...
-    SnackbarHost(
-        hostState = snackbarHostState,
-        modifier = Modifier.align(Alignment.BottomCenter)
-    )
-}
+// NEW:
+signResult.signedMessages.firstOrNull()
 ```
 
-Remove the `innerPadding` variable and the `Scaffold` wrapper. Keep all the content inside the Box. Make sure `Alignment` is imported from `androidx.compose.ui.Alignment`.
+4. If the field is already `signedMessages`, skip this task.
+5. If neither compiles, check the `SignMessagesResult` class in the dependency for the actual field name and use that.
 
-**Verify:** `cd android && ./gradlew assembleDebug` passes.
+**Verify:** `cd /Users/charlesvincent/Desktop/GitHub/W3nto/android && ./gradlew assembleDebug` passes.
 
 ---
 
-### Task 3.3: ProfileViewModel — Show error when unauthenticated user taps favorite
-**File:** `android/app/src/main/java/com/w3nto/app/ui/screens/profile/ProfileViewModel.kt`
-
-Currently `toggleFavorite()` silently returns when `auth.currentUser` is null — no feedback to the user.
-
-Find:
-```kotlin
-fun toggleFavorite() {
-    val userId = auth.currentUser?.uid ?: return
-```
-
-Replace with:
-```kotlin
-fun toggleFavorite() {
-    val userId = auth.currentUser?.uid ?: run {
-        _uiState.value = _uiState.value.copy(error = "Connect your wallet to save favorites")
-        return
-    }
-```
-
-**Verify:** `cd android && ./gradlew assembleDebug` passes.
-
----
-
-### Task 3.4: NavGraph — Fix NavHost initialization race for deep links
+### Task 1.2: NavGraph — Fix back navigation dropping auth'd users on Landing
 **File:** `android/app/src/main/java/com/w3nto/app/ui/navigation/NavGraph.kt`
 
-The current `LaunchedEffect(deepLinkRoute)` fires on first composition, but `NavHost` may not have completed its graph initialization yet when the app is cold-launched via a deep link. This produces `IllegalStateException: NavController is not set`.
+When a user arrives via a deep link to a profile and then presses back, `popBackStack()` sends them to the Landing screen. An authenticated user has no path forward from Landing without re-authenticating.
 
-Find the deep link LaunchedEffect:
+Read the file and find the `onBack` lambda passed to `PublicProfileScreen` (or whichever composable handles the back action from the profile screen). It currently looks like:
+
 ```kotlin
-// Handle deep link navigation
-LaunchedEffect(deepLinkRoute) {
-    val route = deepLinkRoute ?: return@LaunchedEffect
-    navController.navigate(route) {
-        launchSingleTop = true
+// OLD:
+onBack = { navController.popBackStack() }
+```
+
+Replace it so that if `popBackStack()` fails (returns false, meaning no back stack entry exists), the user is navigated to Discover instead:
+
+```kotlin
+// NEW:
+onBack = {
+    if (!navController.popBackStack()) {
+        navController.navigate(Screen.Discover.route) {
+            popUpTo(0) { inclusive = true }
+        }
     }
-    onDeepLinkConsumed()
 }
 ```
 
-Replace it with a version that delays by one frame to ensure NavHost is ready:
+Read the file carefully — there may be multiple `onBack` call sites. Apply this fix only to the one inside the `PublicProfileScreen` composable call.
+
+**Verify:** `cd /Users/charlesvincent/Desktop/GitHub/W3nto/android && ./gradlew assembleDebug` passes.
+
+---
+
+### Task 1.3: FavoritesViewModel — React to auth state changes
+**File:** `android/app/src/main/java/com/w3nto/app/ui/screens/favorites/FavoritesViewModel.kt`
+
+If a user opens the Favorites tab before authentication completes, the screen shows "Connect wallet" and stays there forever — it never reacts when auth finishes.
+
+Read the file and check the constructor injection and `init` block. The fix requires:
+
+1. Add `authRepository: AuthRepository` to the `@HiltViewModel` constructor injection (check if it is already injected first — skip adding it if so).
+2. In the `init` block, after the existing `loadFavorites()` call, add:
+
 ```kotlin
-// Handle deep link navigation — delay one frame to ensure NavHost graph is initialized
+viewModelScope.launch {
+    authRepository.authStateFlow()
+        .drop(1)
+        .distinctUntilChanged { old, new -> old?.uid == new?.uid }
+        .collect { loadFavorites() }
+}
+```
+
+3. Check the import for `distinctUntilChanged` — it is `kotlinx.coroutines.flow.distinctUntilChanged`. Add it if missing.
+4. Check the import for `drop` — it is `kotlinx.coroutines.flow.drop`. Add it if missing.
+5. Confirm `authRepository.authStateFlow()` exists on `AuthRepository`. If the method is named differently (e.g., `currentUserFlow()`), use the correct name.
+
+**Verify:** `cd /Users/charlesvincent/Desktop/GitHub/W3nto/android && ./gradlew assembleDebug` passes.
+
+---
+
+### Task 1.4: ProfileViewModel — Add isLoading=true back to selectPage, clear after blocks load
+**File:** `android/app/src/main/java/com/w3nto/app/ui/screens/profile/ProfileViewModel.kt`
+
+Round 3 removed `isLoading = true` from `selectPage()` to prevent the full profile shimmer from showing during page switches. However, this left a "No blocks yet" flash because the grid empties with no loading indicator at all. The correct fix is: put `isLoading = true` back into `selectPage()` AND ensure it is set back to `false` after blocks finish loading.
+
+Read the file and find `selectPage()`. It currently looks like:
+
+```kotlin
+fun selectPage(page: BentoPage) {
+    _uiState.value = _uiState.value.copy(
+        currentPage = page, blocks = emptyList(), isFavorited = false
+        // isLoading is NOT here after round 3 fix
+    )
+    loadBlocks(page.id)
+}
+```
+
+Change it to:
+
+```kotlin
+fun selectPage(page: BentoPage) {
+    _uiState.value = _uiState.value.copy(
+        currentPage = page, blocks = emptyList(), isFavorited = false,
+        isLoading = true
+    )
+    loadBlocks(page.id)
+}
+```
+
+Then find `loadBlocks()`. At the point where blocks are assigned to `_uiState`, ensure `isLoading = false` is also set. Look for the `.copy(blocks = ...)` call at the end of the blocks load coroutine. It should already have `isLoading = false` there from the initial load path — confirm it does. If it does not, add it:
+
+```kotlin
+_uiState.value = _uiState.value.copy(
+    blocks = blocksResult.getOrDefault(emptyList()),
+    isLoading = false
+)
+```
+
+**Verify:** `cd /Users/charlesvincent/Desktop/GitHub/W3nto/android && ./gradlew assembleDebug` passes.
+
+---
+
+### Task 1.5: ProfileViewModel — Clear toggleFavorite error after 3 seconds
+**File:** `android/app/src/main/java/com/w3nto/app/ui/screens/profile/ProfileViewModel.kt`
+
+When an unauthenticated user taps the favorite button, the error message "Connect your wallet to save favorites" (or similar) is set on the `error` field. This error is never cleared — it persists until the user navigates away.
+
+Read the file and find the `toggleFavorite` function. Find the early-return path where the user is not authenticated. It currently looks like:
+
+```kotlin
+val userId = auth.currentUser?.uid ?: run {
+    _uiState.value = _uiState.value.copy(error = "Connect your wallet to save favorites")
+    return
+}
+```
+
+Replace with a version that auto-clears the error after 3 seconds:
+
+```kotlin
+val userId = auth.currentUser?.uid ?: run {
+    _uiState.value = _uiState.value.copy(error = "Connect your wallet to save favorites")
+    viewModelScope.launch {
+        delay(3000)
+        _uiState.value = _uiState.value.copy(error = null)
+    }
+    return
+}
+```
+
+Check that `delay` is imported (`kotlinx.coroutines.delay`). Add the import if missing.
+
+**Verify:** `cd /Users/charlesvincent/Desktop/GitHub/W3nto/android && ./gradlew assembleDebug` passes.
+
+---
+
+### Task 1.6: DiscoverViewModel — Guard loadMore() against concurrent execution
+**File:** `android/app/src/main/java/com/w3nto/app/ui/screens/discover/DiscoverViewModel.kt`
+
+`loadMore()` has a TOCTOU race — two rapid scroll events can both pass the guard check and fire two concurrent Firestore page loads, leading to duplicate results.
+
+Read the file and find the `loadMore()` function and its class-level fields. The fix requires adding a `Job` guard:
+
+1. At the class level (near other private fields), add:
+```kotlin
+private var loadMoreJob: Job? = null
+```
+
+2. Check that `Job` is imported (`kotlinx.coroutines.Job`). Add the import if missing.
+
+3. In `loadMore()`, add the Job guard at the start of the function, before the existing guard checks OR as the first action after them:
+
+```kotlin
+fun loadMore() {
+    val state = _uiState.value
+    if (state.isLoadingMore || !state.hasMore || state.searchQuery.isNotBlank()) return
+    if (loadMoreJob?.isActive == true) return
+    loadMoreJob = viewModelScope.launch {
+        // ... existing loadMore coroutine body unchanged ...
+    }
+}
+```
+
+Read the existing `loadMore()` carefully — it may already use `viewModelScope.launch { ... }` or it may use a different pattern. Wrap the existing launch in the job assignment. Do not change the inner logic.
+
+**Verify:** `cd /Users/charlesvincent/Desktop/GitHub/W3nto/android && ./gradlew assembleDebug` passes.
+
+---
+
+### Task 1.7: NavGraph — Replace 100ms hardcoded delay with currentDestination guard
+**File:** `android/app/src/main/java/com/w3nto/app/ui/navigation/NavGraph.kt`
+
+The 100ms delay before consuming a deep link route was added in round 2 as a band-aid. The proper fix is to wait until `navController.currentDestination` is not null before navigating.
+
+Read the file and find the `LaunchedEffect` that handles deep link route consumption. It currently looks like:
+
+```kotlin
 LaunchedEffect(deepLinkRoute) {
     val route = deepLinkRoute ?: return@LaunchedEffect
-    // Wait for NavHost to complete its first composition
     kotlinx.coroutines.delay(100)
-    try {
-        navController.navigate(route) {
-            launchSingleTop = true
-        }
-    } catch (e: Exception) {
-        android.util.Log.e("NavGraph", "Deep link navigation failed: ${e.message}")
-    }
-    onDeepLinkConsumed()
+    // ... navigate ...
 }
 ```
 
-**Verify:** `cd android && ./gradlew assembleDebug` passes.
+Replace the `LaunchedEffect` key and guard:
+
+```kotlin
+LaunchedEffect(deepLinkRoute, navController.currentDestination) {
+    val route = deepLinkRoute ?: return@LaunchedEffect
+    if (navController.currentDestination == null) return@LaunchedEffect
+    // ... rest of existing navigation logic unchanged ...
+}
+```
+
+Remove the `kotlinx.coroutines.delay(100)` line. Keep all other logic inside the effect unchanged.
+
+**Verify:** `cd /Users/charlesvincent/Desktop/GitHub/W3nto/android && ./gradlew assembleDebug` passes.
 
 ---
 
-### Task 3.5: DiscoverRepository — Move pagination cursor to Mutex-protected state
-**File:** `android/app/src/main/java/com/w3nto/app/data/repository/DiscoverRepository.kt`
+### Task 1.8: ImageBlock — Remove block.content from URL fallback, add null placeholder
+**File:** `android/app/src/main/java/com/w3nto/app/ui/components/blocks/ImageBlock.kt`
 
-`@Volatile` ensures visibility but NOT atomicity. Concurrent `loadMore()` calls from rapid scroll events can race. Replace `@Volatile` with a `Mutex` to serialize access:
+`block.content` is a text field, not a URL. Including it in the image URL fallback chain causes Coil to attempt loading text strings as image URLs, producing errors.
 
-Find the current file content:
+Read the file and find the `imageUrl` (or equivalent) variable assignment. It currently looks like:
+
 ```kotlin
-@Singleton
-class DiscoverRepository @Inject constructor(
-    private val firestoreDataSource: FirestoreDataSource
-) {
-    @Volatile
-    private var lastDocumentId: String? = null
+// OLD:
+val imageUrl = block.imageUrl ?: block.bgImage ?: block.url ?: block.content
+```
 
-    fun resetPagination() {
-        lastDocumentId = null
-    }
+Replace it with:
 
-    suspend fun getProfiles(pageSize: Int = 20): Result<List<Profile>> = runCatching {
-        val profiles = firestoreDataSource.getDiscoverProfiles(
-            pageSize = pageSize,
-            lastDocumentId = lastDocumentId
+```kotlin
+// NEW:
+val imageUrl = (block.imageUrl ?: block.bgImage ?: block.url)?.takeIf { it.isNotEmpty() }
+```
+
+Then find where `imageUrl` is used in the composable. If `imageUrl` is null (no valid URL), show a placeholder instead of attempting to load. The placeholder can be a simple Box with a centered icon:
+
+```kotlin
+if (imageUrl == null) {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = Icons.Default.Image,
+            contentDescription = "No image",
+            tint = Color.Gray.copy(alpha = 0.5f)
         )
-        if (profiles.isNotEmpty()) {
-            lastDocumentId = profiles.last().username
-        }
-        profiles
     }
+} else {
+    // existing AsyncImage or Image composable using imageUrl
+}
+```
+
+Check imports — `Icons.Default.Image` requires `androidx.compose.material.icons.Icons` and `androidx.compose.material.icons.filled.Image`. Add them if missing. Also check `Alignment` and `Box` imports.
+
+**Verify:** `cd /Users/charlesvincent/Desktop/GitHub/W3nto/android && ./gradlew assembleDebug` passes.
+
+---
+
+### Task 1.9: WalletManager — Add @Volatile to pending* fields
+**File:** `android/app/src/main/java/com/w3nto/app/wallet/WalletManager.kt`
+
+`pendingPublicKey`, `pendingPhantomEncryptionPubKey`, `pendingSession`, and `pendingAuthMessage` are mutable fields that can be written from one coroutine context and read from another (e.g., deep link callback). Without `@Volatile`, reads may see stale values due to CPU cache line visibility.
+
+Read the file and find these four fields. They will look like:
+
+```kotlin
+private var pendingPublicKey: String? = null
+private var pendingPhantomEncryptionPubKey: String? = null
+private var pendingSession: String? = null
+private var pendingAuthMessage: String? = null
+```
+
+Add `@Volatile` to each:
+
+```kotlin
+@Volatile private var pendingPublicKey: String? = null
+@Volatile private var pendingPhantomEncryptionPubKey: String? = null
+@Volatile private var pendingSession: String? = null
+@Volatile private var pendingAuthMessage: String? = null
+```
+
+If any of these fields do not exist (were renamed or removed in a prior round), skip only that specific field — apply `@Volatile` to whichever ones do exist.
+
+**Verify:** `cd /Users/charlesvincent/Desktop/GitHub/W3nto/android && ./gradlew assembleDebug` passes.
+
+---
+
+**Phase 1 Build Check:** Run `cd /Users/charlesvincent/Desktop/GitHub/W3nto/android && ./gradlew assembleDebug`. Must pass before continuing to Phase 2.
+
+---
+
+## Phase 2: Web Critical Fixes (3 tasks)
+
+### Task 2.1: Dashboard — Make handleDeleteBlock and handleDeletePage await Firestore before updating state
+**File:** `src/app/pages/Dashboard.tsx`
+
+`handleDeleteBlock` fires the Firestore delete async (with `.catch()`) and then immediately updates local state regardless of whether the delete succeeded. If the delete fails, the block disappears from the UI but still exists in Firestore — data is now out of sync.
+
+Read the file and find `handleDeleteBlock`. The current pattern is:
+
+```ts
+// OLD pattern (approximate — read the actual file):
+firestoreService.deleteBlock(profile.username, currentPageId, blockId).catch(console.error);
+setProfile({ ...profile, pages: profile.pages.map(p => ...) });
+```
+
+Replace with an async version that awaits the delete and aborts on error:
+
+```ts
+// NEW:
+const handleDeleteBlock = async (blockId: string) => {
+  if (!profile || !window.confirm("Delete this block?")) return;
+  try {
+    await firestoreService.deleteBlock(profile.username, currentPageId, blockId);
+  } catch (err) {
+    console.error(err);
+    toast.error("Failed to delete block");
+    return;
+  }
+  setProfile({ ...profile, pages: profile.pages.map(p =>
+    p.id === currentPageId
+      ? { ...p, blocks: p.blocks.filter(b => b.id !== blockId).map((b, idx) => ({ ...b, position: idx })) }
+      : p
+  )});
+};
+```
+
+Note: if the `window.confirm` guard was already added in round 3, keep it — do not duplicate it. Read the file to see what is already there and merge cleanly.
+
+Apply the same `await`-first pattern to `handleDeletePage`:
+
+```ts
+const handleDeletePage = async (pageId: string) => {
+  if (!profile || !window.confirm("Delete this page?")) return;
+  try {
+    await firestoreService.deletePage(profile.username, pageId);
+  } catch (err) {
+    console.error(err);
+    toast.error("Failed to delete page");
+    return;
+  }
+  // ... existing local state update logic unchanged ...
+};
+```
+
+Read the file to see the exact current local state update logic in `handleDeletePage` and preserve it exactly — only change the Firestore call from fire-and-forget to await-first.
+
+**Verify:** `npm run build` passes.
+
+---
+
+### Task 2.2: firestore.ts — Remove pre-read getDoc from saveBlock and savePage
+**File:** `src/app/services/firestore.ts`
+
+`saveBlock` currently does a `getDoc` read before every write to check if the document exists (to conditionally set `createdAt`). This doubles the Firestore read cost on every block save. `setDoc` with `merge: true` already preserves existing fields including `createdAt` — the pre-read is unnecessary.
+
+Read the file and find `saveBlock`. The current pattern is approximately:
+
+```ts
+// OLD:
+const existing = await getDoc(blockRef);
+const blockData = {
+  ...fields,
+  ...(existing.exists() ? {} : { createdAt: serverTimestamp() }),
+};
+await setDoc(blockRef, blockData, { merge: true });
 ```
 
 Replace with:
-```kotlin
-@Singleton
-class DiscoverRepository @Inject constructor(
-    private val firestoreDataSource: FirestoreDataSource
-) {
-    private val paginationMutex = kotlinx.coroutines.sync.Mutex()
-    private var lastDocumentId: String? = null
 
-    fun resetPagination() {
-        lastDocumentId = null
-    }
-
-    suspend fun getProfiles(pageSize: Int = 20): Result<List<Profile>> = runCatching {
-        paginationMutex.withLock {
-            val profiles = firestoreDataSource.getDiscoverProfiles(
-                pageSize = pageSize,
-                lastDocumentId = lastDocumentId
-            )
-            if (profiles.isNotEmpty()) {
-                lastDocumentId = profiles.last().username
-            }
-            profiles
-        }
-    }
+```ts
+// NEW:
+const blockData = { ...fields, updatedAt: serverTimestamp() };
+await setDoc(blockRef, blockData, { merge: true });
 ```
 
-Add the import at the top:
-```kotlin
-import kotlinx.coroutines.sync.withLock
-```
+Apply the same fix to `savePage` — find any `getDoc` existence check before the `setDoc` and remove it, keeping only the `setDoc` with `merge: true`.
 
-**Verify:** `cd android && ./gradlew assembleDebug` passes.
+After the change, check if `getDoc` is still used anywhere else in the file. If `saveBlock` and `savePage` were the only callers, remove the `getDoc` import from the top of the file to avoid an unused import TypeScript warning.
+
+**Verify:** `npm run build` passes.
 
 ---
 
-**Phase 3 Build Check:** `cd android && ./gradlew assembleDebug` must pass.
-
----
-
-## Phase 4: P1 Broken Features (Web)
-
-### Task 4.1: WalletContext — Add wallet adapters (walletAdapters is empty array)
+### Task 2.3: WalletContext — Reset userInitiatedRef when wallet picker closes without selection
 **File:** `src/app/contexts/WalletContext.tsx`
 
-The current code:
-```typescript
-const walletAdapters = useMemo(() => [], []);
+`userInitiatedRef` is set to `true` when the user clicks "Connect Wallet" but is never reset if the user opens the wallet picker modal and then closes it without selecting a wallet. This means the next auto-connect event (or any wallet state change) will be treated as user-initiated even though the user walked away.
+
+Read the file and find the wallet picker modal's `onClose` handler. It currently looks like:
+
+```ts
+// OLD:
+onClose={() => setShowPicker(false)}
 ```
 
-...initializes `SolanaWalletProvider` with zero adapters. On browsers without an installed wallet, the picker shows nothing. The `@solana/wallet-adapter-wallets` package is already installed but unused.
+Replace with:
 
-Replace:
-```typescript
-const walletAdapters = useMemo(() => [], []);
+```ts
+// NEW:
+onClose={() => { setShowPicker(false); userInitiatedRef.current = false; }}
 ```
 
-With:
-```typescript
-import { PhantomWalletAdapter, SolflareWalletAdapter } from "@solana/wallet-adapter-wallets";
-
-const walletAdapters = useMemo(
-  () => [new PhantomWalletAdapter(), new SolflareWalletAdapter()],
-  []
-);
-```
-
-Add the import at the top of the file with the other imports. Check if it already exists before adding.
-
-**Verify:** `npm run build` passes (TypeScript strict mode check).
-
----
-
-### Task 4.2: UserProfile — Fix false "not found" for profiles with zero pages
-**File:** `src/app/pages/UserProfile.tsx`
-
-The current condition:
-```typescript
-if (notFound || !profile || !currentPage) {
-```
-
-...shows "Profile not found" when a profile exists but has zero pages (e.g., a brand-new user who just signed up). `currentPage` is null when `profile.pages` is empty, so the not-found screen shows "The profile 'username' doesn't exist" for a real user.
-
-Find this condition (it may be slightly different in the actual file — read the file first). Replace the combined condition with separate handling:
-
-```typescript
-if (notFound || !profile) {
-  return (
-    // ... existing not-found JSX ...
-  );
-}
-
-if (!currentPage) {
-  return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="text-center">
-        <p className="text-2xl font-bold mb-2">{profile.displayName || profile.username}</p>
-        <p className="text-gray-500">This profile has no pages yet.</p>
-      </div>
-    </div>
-  );
-}
-```
-
-Read the actual file first to find the exact existing not-found JSX, then split the condition appropriately.
+If `onClose` is defined as a separate function rather than an inline arrow, add `userInitiatedRef.current = false;` as the first line of that function.
 
 **Verify:** `npm run build` passes.
 
 ---
 
-### Task 4.3: Dashboard — Fix stale closure in debounced save
-**File:** `src/app/pages/Dashboard.tsx`
-
-The debounced save has a race condition: if a save is already in-flight when a new change comes in, the in-flight save may write stale state (capturing old profile data). Add a version counter to abort superseded saves.
-
-Find the `debouncedSave` function in Dashboard.tsx. Read the file to see its exact current form. It will look something like:
-
-```typescript
-const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
-
-const debouncedSave = useCallback((profileToSave: Profile) => {
-  if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-  saveTimeoutRef.current = setTimeout(async () => {
-    // ... save logic ...
-  }, 2000);
-}, []);
-```
-
-Add a `saveVersionRef` just after `saveTimeoutRef`:
-```typescript
-const saveVersionRef = useRef(0);
-```
-
-Then modify `debouncedSave` to capture and check the version:
-```typescript
-const debouncedSave = useCallback((profileToSave: Profile) => {
-  if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-  const version = ++saveVersionRef.current;
-  saveTimeoutRef.current = setTimeout(async () => {
-    if (version !== saveVersionRef.current) return; // superseded by newer save
-    // ... rest of the existing save logic unchanged ...
-  }, 2000);
-}, []);
-```
-
-Read the file carefully before editing to preserve the exact existing save logic (error handling, setIsSaving, etc.).
-
-**Verify:** `npm run build` passes.
+**Phase 2 Build Check:** `npm run build` must pass before continuing to Phase 3.
 
 ---
 
-### Task 4.4: Dashboard — Add missing saveTimeoutRef cleanup on unmount
-**File:** `src/app/pages/Dashboard.tsx`
+## Phase 3: Web Feature Fixes (7 tasks)
 
-When the Dashboard component unmounts (user navigates away without logging out), the pending debounce timer is never cleared. This can cause state updates on unmounted components.
+### Task 3.1: ProfileEditor — Sync originalUsernameRef when username becomes available
+**File:** `src/app/app/components/ProfileEditor.tsx` (check the actual path — may be `src/app/components/ProfileEditor.tsx`)
 
-Find the existing `useEffect` blocks in Dashboard. Add a cleanup effect. If there is already a `useEffect(() => { return () => { ... } }, [])` cleanup, add the timeout clear to it. Otherwise add a new one:
+`originalUsernameRef` captures the username at mount time but goes stale after a successful save — if the user saves a new username, the ref still holds the old value, breaking the "has username changed?" comparison on subsequent edits.
 
-```typescript
-// Cleanup: clear pending debounce timer on unmount
+Read the file and find `originalUsernameRef`. Then find the `useEffect` that tracks username availability (it checks for `"available"` status). Add a sync to the ref inside or alongside that effect:
+
+```ts
 useEffect(() => {
-  return () => {
-    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-  };
-}, []);
+  originalUsernameRef.current = profile.username;
+}, [profile.username]);
 ```
+
+Check if an effect with `[profile.username]` as a dependency already exists — if so, add the ref sync inside it rather than creating a duplicate effect.
 
 **Verify:** `npm run build` passes.
 
 ---
 
-### Task 4.5: Dashboard — Fix duplicate page slugs
-**File:** `src/app/pages/Dashboard.tsx`
+### Task 3.2: ProfileEditor — Remove reserved username guard from onChange, keep only visual validation
+**File:** `src/app/app/components/ProfileEditor.tsx` (check actual path)
 
-`handleCreatePage` uses `profile.pages.length + 1` for the slug. If a user creates page 3, deletes page 2, then creates another page, the new page gets slug `page-3` which duplicates the existing one. Duplicate slugs cause the wrong page to load.
+The `isReservedUsername` check in the username `onChange` handler silently drops keystrokes when a user types a reserved word. From the user's perspective, the input just stops responding — confusing and hostile UX.
 
-Find `handleCreatePage` and the slug assignment. It will look like:
-```typescript
-slug: `page-${profile.pages.length + 1}`,
-```
+Read the file and find the username input `onChange` handler. It looks like:
 
-Replace with a timestamp-based slug that is guaranteed unique:
-```typescript
-slug: `page-${Date.now()}`,
-```
-
-**Verify:** `npm run build` passes.
-
----
-
-### Task 4.6: WalletContext — Await signOut in disconnect
-**File:** `src/app/contexts/WalletContext.tsx`
-
-The `disconnect` function calls `signOut(auth)` without awaiting it. If signOut fails silently, the Firebase auth state persists.
-
-Find:
-```typescript
-const disconnect = useCallback(() => {
-  authedWalletRef.current = null;
-  walletDisconnect();
-  signOut(auth);
-  setAuthError(null);
-}, [walletDisconnect]);
-```
-
-Replace with:
-```typescript
-const disconnect = useCallback(() => {
-  authedWalletRef.current = null;
-  walletDisconnect();
-  signOut(auth).catch((err) => console.error("Sign out error:", err));
-  setAuthError(null);
-}, [walletDisconnect]);
-```
-
-**Verify:** `npm run build` passes.
-
----
-
-### Task 4.7: Web — Fix socialPlatforms.ts missing React import
-**File:** `src/app/utils/socialPlatforms.ts`
-
-The file uses `React.ComponentType<any>` as a type but never imports `React`. With strict TypeScript this is fragile.
-
-Find the type definition:
-```typescript
-icon: React.ComponentType<any>;
-```
-
-Replace with a proper import and typed reference. At the top of the file add:
-```typescript
-import type { ComponentType } from "react";
-```
-
-Then change the field type:
-```typescript
-icon: ComponentType<{ className?: string }>;
-```
-
-**Verify:** `npm run build` passes.
-
----
-
-**Phase 4 Build Check:** `npm run build` must pass. Fix any TypeScript errors before proceeding.
-
----
-
-## Phase 5: P2 Polish, Final Builds, and Commit
-
-### Task 5.1: ProfileEditor — Validate avatar URL input
-**File:** `src/app/components/ProfileEditor.tsx`
-
-The avatar URL text input accepts any string including `javascript:` URIs and base64 data URIs (which could push Firestore documents toward the 1MB limit).
-
-Read the file to find the avatar URL input's onChange handler. It will be updating `profile.avatar`. Add protocol validation:
-
-```typescript
+```ts
+// OLD:
 onChange={(e) => {
-  const val = e.target.value;
-  // Only allow http/https URLs or empty string
-  if (val && !val.startsWith('https://') && !val.startsWith('http://')) return;
-  onUpdate({ ...profile, avatar: val });
+  const value = e.target.value;
+  if (!isReservedUsername(value)) {
+    onUpdate({ ...profile, username: value });
+  }
 }}
 ```
 
-**Verify:** `npm run build` passes.
+Replace with:
 
----
-
-### Task 5.2: Dashboard — Block position renormalization after delete
-**File:** `src/app/pages/Dashboard.tsx`
-
-When a block is deleted, the remaining blocks keep their old positions (e.g., 0, 2, 3 after deleting position 1). If two blocks end up with the same position value, their sort order is undefined. Renormalize after deletes.
-
-Find `handleDeleteBlock`. After filtering out the deleted block, renormalize positions:
-```typescript
-const updatedBlocks = p.blocks
-  .filter((b) => b.id !== blockId)
-  .map((b, idx) => ({ ...b, position: idx }));
+```ts
+// NEW:
+onChange={(e) => {
+  const value = e.target.value;
+  onUpdate({ ...profile, username: value });
+}}
 ```
 
-Read the file to find the exact current filter syntax and integrate the `.map` renormalization into it.
+Keep the `isReservedUsername` function itself — it should still be used for the visual validation message that tells the user the name is reserved. Do not remove any JSX that displays a "reserved username" error message.
 
 **Verify:** `npm run build` passes.
 
 ---
 
-### Task 5.3: Android — Fix `allowBackup` in AndroidManifest
-**File:** `android/app/src/main/AndroidManifest.xml`
+### Task 3.3: ProfileEditor — Add min-length visual validation for username
+**File:** `src/app/app/components/ProfileEditor.tsx` (check actual path)
 
-The manifest has `android:allowBackup="true"` which allows cached auth tokens to be extracted via ADB on rooted devices.
+Firestore rules require usernames to be at least 3 characters, but the UI does not validate this. Users can type 1-2 character usernames, attempt to save, and get a cryptic Firestore permission error.
 
-Find:
-```xml
-android:allowBackup="true"
+Read the file and find where username validation messages are displayed (look for the existing "reserved username" or "taken" error message JSX). After the username input and near the existing validation messages, add:
+
+```tsx
+{profile.username.length > 0 && profile.username.length < 3 && (
+  <p className="text-sm text-red-500 mt-1">Username must be at least 3 characters</p>
+)}
+```
+
+Place this immediately after the username `<input>` element, alongside other validation messages. Do not replace any existing validation — add it as an additional conditional.
+
+**Verify:** `npm run build` passes.
+
+---
+
+### Task 3.4: Dashboard — Dedup page slugs on rename
+**File:** `src/app/pages/Dashboard.tsx`
+
+`handleRenamePage` generates a slug from the new name but does not check if that slug already exists on another page. Renaming "Work" to match another page's slug creates a collision that breaks page routing.
+
+Read the file and find `handleRenamePage`. Find where the slug is computed. It will look like:
+
+```ts
+const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+```
+
+After that line, add a dedup check:
+
+```ts
+const existingSlugs = profile.pages.filter(p => p.id !== pageId).map(p => p.slug);
+const finalSlug = existingSlugs.includes(slug) ? `${slug}-${Date.now()}` : slug;
+```
+
+Then replace any reference to `slug` in the Firestore save and state update within this function with `finalSlug`.
+
+**Verify:** `npm run build` passes.
+
+---
+
+### Task 3.5: UserProfile — Fix empty displayName avatar placeholder
+**File:** `src/app/pages/UserProfile.tsx`
+
+`profile.displayName.charAt(0)` returns an empty string when `displayName` is empty. The avatar placeholder shows nothing.
+
+Read the file and find the avatar placeholder — it is typically an element that shows the first character of the display name when no avatar image is set. It looks like:
+
+```tsx
+// OLD:
+{profile.displayName.charAt(0)}
 ```
 
 Replace with:
-```xml
-android:allowBackup="false"
+
+```tsx
+// NEW:
+{(profile.displayName || profile.username || "?").charAt(0).toUpperCase()}
 ```
 
-**Verify:** `cd android && ./gradlew assembleDebug` passes.
+Also search for the same pattern in `ProfileEditor.tsx` (the editor may have its own avatar placeholder with the same bug). Apply the same fix there if found.
+
+**Verify:** `npm run build` passes.
 
 ---
 
-### Task 5.4: Android — Validate deep link path segments in MainActivity
-**File:** `android/app/src/main/java/com/w3nto/app/MainActivity.kt`
+### Task 3.6: Landing — Fix false social proof copy
+**File:** Find the landing page file — check `src/app/pages/Landing.tsx`, `src/app/pages/Home.tsx`, or `src/app/pages/LandingPage.tsx`
 
-The deep link handler takes `pathSegments[0]` directly as a username without sanitization. While Firestore handles this safely, extremely long or malformed usernames could cause display issues.
+The text "Join thousands of creators" is false — the product is not yet at that scale. This is a credibility issue.
 
-Read the file to find the deep link path segment extraction. It will look like:
-```kotlin
-val username = pathSegments[0]
-val pageSlug = pathSegments.getOrNull(1)
+Read the file and find that string. Replace it:
+
+```tsx
+// OLD:
+Join thousands of creators
+// NEW:
+Start building your Web3 profile
 ```
 
-Add validation before constructing the route:
-```kotlin
-val username = pathSegments[0].lowercase().take(30)
-val pageSlug = pathSegments.getOrNull(1)?.lowercase()?.take(50)
-// Only proceed if username has valid format
-if (!username.matches(Regex("^[a-z0-9_]{1,30}$"))) return
-```
+The replacement should preserve the surrounding JSX exactly — only change the text content of that element.
 
-**Verify:** `cd android && ./gradlew assembleDebug` passes.
+**Verify:** `npm run build` passes.
 
 ---
 
-### Task 5.5: Final Build Verification
+### Task 3.7: Landing — Remove dead social links section from footer
+**VERIFY FIRST:** Read the landing page file. Check if the footer social links section (the one with `href="#"` anchor tags from round 3) was already removed. If it was already removed in round 3, skip this task.
+
+If the social links section still exists but the individual `<a href="#">` anchors were removed (leaving an empty container), remove the entire container element too. The goal is a clean footer with no dead link section at all.
+
+If the entire social links section is already gone, skip.
+
+**Verify:** `npm run build` passes.
+
+---
+
+**Phase 3 Build Check:** `npm run build` must pass before continuing to Phase 4.
+
+---
+
+## Phase 4: Cleanup and Polish (2 tasks)
+
+### Task 4.1: package.json — Remove dead dependencies
+**File:** `package.json`
+
+`react-dnd`, `react-dnd-html5-backend`, and `motion` are listed as dependencies but are not used anywhere in the codebase. They add unnecessary bundle weight and install time.
+
+Run:
+```bash
+cd /Users/charlesvincent/Desktop/GitHub/W3nto && npm uninstall react-dnd react-dnd-html5-backend motion
+```
+
+After uninstalling, verify no import of these packages exists anywhere in `src/`:
+
+```bash
+grep -r "react-dnd\|motion" /Users/charlesvincent/Desktop/GitHub/W3nto/src --include="*.ts" --include="*.tsx" -l
+```
+
+If any files still import from these packages, either remove the imports (if the import is genuinely unused) or do NOT uninstall that package. Do not break working code to satisfy this task.
+
+**Verify:** `npm run build` passes.
+
+---
+
+### Task 4.2: TokenChart — Remove unused chainId from destructured props
+**File:** Find the TokenChart component — check `src/app/components/blocks/TokenChart.tsx` or `src/app/components/TokenChart.tsx`
+
+`chainId` is destructured from props but never used in the component body. This produces a TypeScript unused variable warning.
+
+Read the file and find the props destructuring. It looks like:
+
+```ts
+// OLD:
+const { token, chainId, ... } = props;
+// or:
+function TokenChart({ token, chainId, ... }) {
+```
+
+Remove `chainId` from the destructuring. If `chainId` is part of a typed props interface, also remove it from the interface definition — but only if it is not consumed anywhere in the component and removing it from the interface does not break any callers that pass it in.
+
+If removing `chainId` from the interface would break callers, instead just prefix it with an underscore in the destructuring to suppress the warning:
+
+```ts
+const { token, chainId: _chainId, ... } = props;
+```
+
+**Verify:** `npm run build` passes with no unused variable warnings for this file.
+
+---
+
+**Phase 4 Build Check:** `npm run build` must pass before continuing to Phase 5.
+
+---
+
+## Phase 5: Final Verification and Commit
+
+### Task 5.1: Final Build Verification
 
 Run BOTH builds and confirm they pass:
 
 ```bash
 npm run build
-cd android && ./gradlew assembleDebug
+cd /Users/charlesvincent/Desktop/GitHub/W3nto/android && ./gradlew assembleDebug
 ```
 
-Both must succeed with zero errors. Fix any errors before committing.
+Both must succeed with zero errors. Fix any compilation errors before committing.
 
 ---
 
-### Task 5.6: Commit All Changes
+### Task 5.2: Commit All Changes
 
-Stage all modified files and commit with:
+Stage all modified files and commit with this exact message:
+
 ```
-fix: round 2 audit fixes — crash guards, nav safety, search fix, security headers, web polish
+fix: round 4 — favorites auth reactivity, delete data integrity, save optimization, UX polish
 ```
 
-Use the exact Conventional Commits format. Co-author line required:
+Use the Conventional Commits format. Co-author line required:
 ```
 Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
 ```
+
+Use a HEREDOC for the commit message to preserve formatting exactly.
 
 ---
 
 ## Execution Order
 
-1. Phase 1 (Tasks 1.1-1.6) — Android P0 crashes and data corruption
-2. Phase 2 (Tasks 2.1-2.3) — Security hardening
-3. Phase 3 (Tasks 3.1-3.5) — Android P1 broken features
-4. Phase 4 (Tasks 4.1-4.7) — Web P1 broken features
-5. Phase 5 (Tasks 5.1-5.6) — Polish, final builds, commit
+1. Phase 1 (Tasks 1.1-1.9) — Android fixes
+2. Phase 2 (Tasks 2.1-2.3) — Web critical fixes
+3. Phase 3 (Tasks 3.1-3.7) — Web feature fixes
+4. Phase 4 (Tasks 4.1-4.2) — Cleanup and polish
+5. Phase 5 (Tasks 5.1-5.2) — Final builds and commit
 
 ## Important Notes
-- **Read every file before editing** — line numbers in this document are approximate
+- **Read every file before editing** — line numbers and code snippets in this document are approximate
+- **Verify-first tasks** — read the file and skip if the fix is already applied (prior rounds may have landed some of these)
 - **Check imports** before adding new ones — many may already exist
 - **Run the build** after each phase to catch errors early
-- **Do not touch** anything already fixed in commit `2812f48`
+- **Do not touch** anything already fixed in previous rounds (listed in "What Was Already Fixed" above)
 - You have full Bash access — run npm, gradle, git, any command needed
-- Total tasks: 24 across 5 phases
+- Total tasks: 21 across 5 phases (some may be skipped if verify-first check passes)
+- Working directory: `/Users/charlesvincent/Desktop/GitHub/W3nto`

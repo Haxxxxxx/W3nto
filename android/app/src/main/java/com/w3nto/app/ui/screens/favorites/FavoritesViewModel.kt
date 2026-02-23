@@ -4,11 +4,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.w3nto.app.data.model.FavoritePage
+import com.w3nto.app.data.repository.AuthRepository
 import com.w3nto.app.data.repository.FavoritesRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -22,7 +25,8 @@ data class FavoritesUiState(
 @HiltViewModel
 class FavoritesViewModel @Inject constructor(
     private val favoritesRepository: FavoritesRepository,
-    private val auth: FirebaseAuth
+    private val auth: FirebaseAuth,
+    private val authRepository: AuthRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(FavoritesUiState())
@@ -30,6 +34,12 @@ class FavoritesViewModel @Inject constructor(
 
     init {
         loadFavorites()
+        viewModelScope.launch {
+            authRepository.authStateFlow()
+                .drop(1)
+                .distinctUntilChanged { old, new -> old?.uid == new?.uid }
+                .collect { loadFavorites() }
+        }
     }
 
     fun loadFavorites() {

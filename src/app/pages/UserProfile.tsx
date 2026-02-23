@@ -265,7 +265,7 @@ export default function UserProfile() {
               className="size-24 md:size-32 rounded-full mx-auto mb-6 border-4 shadow-lg flex items-center justify-center text-4xl bg-gradient-to-br from-purple-400 to-pink-400"
               style={{ borderColor: currentPage.theme.cardBackground }}
             >
-              {profile.displayName.charAt(0)}
+              {(profile.displayName || profile.username || "?").charAt(0).toUpperCase()}
             </div>
           )}
           <h1 className="text-4xl mb-3">{profile.displayName}</h1>

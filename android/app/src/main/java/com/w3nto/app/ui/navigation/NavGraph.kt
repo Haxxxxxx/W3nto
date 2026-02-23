@@ -61,11 +61,10 @@ fun NavGraph(
         }
     }
 
-    // Handle deep link navigation — delay one frame to ensure NavHost graph is initialized
-    LaunchedEffect(deepLinkRoute) {
+    // Handle deep link navigation — wait for NavHost to initialize before navigating
+    LaunchedEffect(deepLinkRoute, navController.currentDestination) {
         val route = deepLinkRoute ?: return@LaunchedEffect
-        // Wait for NavHost to complete its first composition
-        kotlinx.coroutines.delay(100)
+        if (navController.currentDestination == null) return@LaunchedEffect
         try {
             navController.navigate(route) {
                 launchSingleTop = true
@@ -146,7 +145,13 @@ fun NavGraph(
                 PublicProfileScreen(
                     username = username,
                     pageSlug = pageSlug,
-                    onBack = { navController.popBackStack() }
+                    onBack = {
+                        if (!navController.popBackStack()) {
+                            navController.navigate(Screen.Discover.route) {
+                                popUpTo(0) { inclusive = true }
+                            }
+                        }
+                    }
                 )
             }
         }

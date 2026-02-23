@@ -166,14 +166,15 @@ export default function Dashboard() {
     setCurrentPageId(newPage.id);
   };
 
-  const handleDeletePage = (pageId: string) => {
-    if (!profile) return;
-    // Delete from Firestore immediately (cascades to blocks)
-    firestoreService.deletePage(profile.username, pageId).catch((err) => {
+  const handleDeletePage = async (pageId: string) => {
+    if (!profile || !window.confirm("Delete this page?")) return;
+    try {
+      await firestoreService.deletePage(profile.username, pageId);
+    } catch (err) {
       console.error(err);
       toast.error("Failed to delete page");
-    });
-    // Update local state
+      return;
+    }
     const updatedPages = profile.pages.filter((p) => p.id !== pageId);
     updateProfile({
       ...profile,
@@ -198,10 +199,12 @@ export default function Dashboard() {
   const handleRenamePage = async (pageId: string, name: string) => {
     if (!profile) return;
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+    const existingSlugs = profile.pages.filter(p => p.id !== pageId).map(p => p.slug);
+    const finalSlug = existingSlugs.includes(slug) ? `${slug}-${Date.now()}` : slug;
     const updated = {
       ...profile,
       pages: profile.pages.map((p) =>
-        p.id === pageId ? { ...p, name, slug, updatedAt: Date.now() } : p
+        p.id === pageId ? { ...p, name, slug: finalSlug, updatedAt: Date.now() } : p
       ),
     };
     setProfile(updated);
@@ -278,15 +281,15 @@ export default function Dashboard() {
     setEditingBlock(null);
   };
 
-  const handleDeleteBlock = (blockId: string) => {
-    if (!profile) return;
-    if (!window.confirm("Delete this block?")) return;
-    // Delete from Firestore immediately
-    firestoreService.deleteBlock(profile.username, currentPageId, blockId).catch((err) => {
+  const handleDeleteBlock = async (blockId: string) => {
+    if (!profile || !window.confirm("Delete this block?")) return;
+    try {
+      await firestoreService.deleteBlock(profile.username, currentPageId, blockId);
+    } catch (err) {
       console.error(err);
       toast.error("Failed to delete block");
-    });
-    // Update local state
+      return;
+    }
     updateProfile({
       ...profile,
       pages: profile.pages.map((p) =>

@@ -38,6 +38,10 @@ export default function ProfileEditor({ profile, onUpdate }: ProfileEditorProps)
 
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [profile.username]);
+
+  useEffect(() => {
+    originalUsernameRef.current = profile.username;
+  }, [profile.username]);
   const handleAvatarUpload = () => {
     createImageInput((dataUrl) => {
       onUpdate({ ...profile, avatar: dataUrl });
@@ -59,7 +63,7 @@ export default function ProfileEditor({ profile, onUpdate }: ProfileEditorProps)
             />
           ) : (
             <div className="size-24 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white text-2xl border-2 border-gray-200">
-              {profile.displayName.charAt(0)}
+              {(profile.displayName || profile.username || "?").charAt(0).toUpperCase()}
             </div>
           )}
           <div className="flex-1">
@@ -97,9 +101,7 @@ export default function ProfileEditor({ profile, onUpdate }: ProfileEditorProps)
             value={profile.username}
             onChange={(e) => {
               const value = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "");
-              if (!isReservedUsername(value)) {
-                onUpdate({ ...profile, username: value });
-              }
+              onUpdate({ ...profile, username: value });
             }}
             className={`flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 ${
               isReservedUsername(profile.username) ? "border-red-400" : "border-gray-200"
@@ -108,6 +110,9 @@ export default function ProfileEditor({ profile, onUpdate }: ProfileEditorProps)
             pattern="[a-z0-9_]+"
           />
         </div>
+        {profile.username.length > 0 && profile.username.length < 3 && (
+          <p className="text-sm text-red-500 mt-1">Username must be at least 3 characters</p>
+        )}
         {isReservedUsername(profile.username) ? (
           <p className="text-sm text-red-500 mt-1">This username is reserved</p>
         ) : usernameStatus === "checking" ? (

@@ -6,6 +6,7 @@ import com.w3nto.app.data.model.Profile
 import com.w3nto.app.data.repository.DiscoverRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -35,6 +36,7 @@ class DiscoverViewModel @Inject constructor(
     val uiState: StateFlow<DiscoverUiState> = _uiState.asStateFlow()
 
     private val _searchQuery = MutableStateFlow("")
+    private var loadMoreJob: Job? = null
 
     init {
         loadProfiles()
@@ -111,8 +113,8 @@ class DiscoverViewModel @Inject constructor(
     fun loadMore() {
         val state = _uiState.value
         if (state.isLoadingMore || !state.hasMore || state.searchQuery.isNotBlank()) return
-
-        viewModelScope.launch {
+        if (loadMoreJob?.isActive == true) return
+        loadMoreJob = viewModelScope.launch {
             _uiState.value = state.copy(isLoadingMore = true)
             val result = discoverRepository.getProfiles()
             result.fold(

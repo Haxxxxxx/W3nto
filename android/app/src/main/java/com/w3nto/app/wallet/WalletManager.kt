@@ -46,10 +46,10 @@ class WalletManager @Inject constructor(
     val error: StateFlow<String?> = _error.asStateFlow()
 
     // Temporary state for the two-step Phantom flow (connect → sign)
-    private var pendingPublicKey: String? = null
-    private var pendingPhantomEncryptionPubKey: String? = null
-    private var pendingSession: String? = null
-    private var pendingAuthMessage: String? = null
+    @Volatile private var pendingPublicKey: String? = null
+    @Volatile private var pendingPhantomEncryptionPubKey: String? = null
+    @Volatile private var pendingSession: String? = null
+    @Volatile private var pendingAuthMessage: String? = null
 
     val isSolanaDevice: Boolean
         get() {
