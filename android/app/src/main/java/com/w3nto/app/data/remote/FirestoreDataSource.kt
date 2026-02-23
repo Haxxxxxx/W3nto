@@ -28,12 +28,11 @@ class FirestoreDataSource @Inject constructor(
         val snapshot = firestore.collection("profiles")
             .document(username)
             .collection("pages")
-            .orderBy("createdAt", Query.Direction.ASCENDING)
             .get()
             .await()
-        return snapshot.documents.mapNotNull { doc ->
-            doc.data?.let { BentoPage.fromMap(doc.id, it) }
-        }
+        return snapshot.documents
+            .mapNotNull { doc -> doc.data?.let { BentoPage.fromMap(doc.id, it) } }
+            .sortedBy { it.position ?: Int.MAX_VALUE }
     }
 
     suspend fun getPage(username: String, pageId: String): BentoPage? {

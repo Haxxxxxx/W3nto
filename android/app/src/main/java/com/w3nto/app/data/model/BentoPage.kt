@@ -11,6 +11,7 @@ data class BentoPage(
     val slug: String = "main",
     @Transient val theme: Theme? = null,
     val isFavorite: Boolean = false,
+    val position: Int? = null,
     @Transient val blocks: List<Block> = emptyList(),
     @Transient val createdAt: Timestamp? = null,
     @Transient val updatedAt: Timestamp? = null
@@ -32,6 +33,7 @@ data class BentoPage(
             slug = map["slug"] as? String ?: "main",
             theme = (map["theme"] as? Map<String, Any?>)?.let { Theme.fromMap(it) },
             isFavorite = map["isFavorite"] as? Boolean ?: false,
+            position = (map["position"] as? Number)?.toInt(),
             createdAt = map["createdAt"] as? Timestamp,
             updatedAt = map["updatedAt"] as? Timestamp
         )

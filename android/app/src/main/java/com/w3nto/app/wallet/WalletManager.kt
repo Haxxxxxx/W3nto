@@ -36,6 +36,8 @@ class WalletManager @Inject constructor(
     private val authRepository: AuthRepository,
     private val functions: FirebaseFunctions
 ) {
+    private val prefs = context.getSharedPreferences("wallet_pending", Context.MODE_PRIVATE)
+
     private val _connectedWallet = MutableStateFlow<ConnectedWallet?>(null)
     val connectedWallet: StateFlow<ConnectedWallet?> = _connectedWallet.asStateFlow()
 
@@ -46,10 +48,22 @@ class WalletManager @Inject constructor(
     val error: StateFlow<String?> = _error.asStateFlow()
 
     // Temporary state for the two-step Phantom flow (connect → sign)
-    @Volatile private var pendingPublicKey: String? = null
-    @Volatile private var pendingPhantomEncryptionPubKey: String? = null
-    @Volatile private var pendingSession: String? = null
-    @Volatile private var pendingAuthMessage: String? = null
+    // Persisted to SharedPreferences to survive process death between connect and sign steps
+    private var pendingPublicKey: String?
+        get() = prefs.getString("pendingPublicKey", null)
+        set(value) = prefs.edit().apply { if (value != null) putString("pendingPublicKey", value) else remove("pendingPublicKey") }.apply()
+
+    private var pendingPhantomEncryptionPubKey: String?
+        get() = prefs.getString("pendingPhantomEncryptionPubKey", null)
+        set(value) = prefs.edit().apply { if (value != null) putString("pendingPhantomEncryptionPubKey", value) else remove("pendingPhantomEncryptionPubKey") }.apply()
+
+    private var pendingSession: String?
+        get() = prefs.getString("pendingSession", null)
+        set(value) = prefs.edit().apply { if (value != null) putString("pendingSession", value) else remove("pendingSession") }.apply()
+
+    private var pendingAuthMessage: String?
+        get() = prefs.getString("pendingAuthMessage", null)
+        set(value) = prefs.edit().apply { if (value != null) putString("pendingAuthMessage", value) else remove("pendingAuthMessage") }.apply()
 
     val isSolanaDevice: Boolean
         get() {

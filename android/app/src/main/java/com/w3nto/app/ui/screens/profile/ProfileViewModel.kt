@@ -81,6 +81,8 @@ class ProfileViewModel @Inject constructor(
 
             val currentPage = if (pageSlug != null) {
                 pages.find { it.slug == pageSlug }
+                    ?: pages.find { it.id == profile.defaultPageId }
+                    ?: pages.firstOrNull()
             } else {
                 pages.find { it.id == profile.defaultPageId } ?: pages.firstOrNull()
             }

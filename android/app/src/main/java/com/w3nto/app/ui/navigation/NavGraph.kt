@@ -50,12 +50,15 @@ fun NavGraph(
     }
 
     // Auto-navigate to Discover when auth completes while on Landing/ConnectWallet
+    // Skip if a deep link is pending — the deep link effect will handle navigation
     LaunchedEffect(firebaseUser) {
         if (firebaseUser != null) {
             val route = navController.currentDestination?.route
             if (route == Screen.Landing.route || route == Screen.ConnectWallet.route) {
-                navController.navigate(Screen.Discover.route) {
-                    popUpTo(Screen.Landing.route) { inclusive = true }
+                if (deepLinkRoute == null) {
+                    navController.navigate(Screen.Discover.route) {
+                        popUpTo(Screen.Landing.route) { inclusive = true }
+                    }
                 }
             }
         }

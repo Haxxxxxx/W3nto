@@ -47,6 +47,10 @@ export default function Dashboard() {
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const saveVersionRef = useRef(0);
+  const originalUsernameRef = useRef<string | null>(null);
+  const dirtyPagesRef = useRef<Set<string>>(new Set());
+  const dirtyBlocksRef = useRef<Set<string>>(new Set());
+  const addressRef = useRef(address);
 
   // Load profile from Firestore
   useEffect(() => {
@@ -91,6 +95,9 @@ export default function Dashboard() {
         if (!cancelled) {
           setProfile(userProfile);
           setCurrentPageId(userProfile.defaultPageId || userProfile.pages[0]?.id || "");
+          if (!originalUsernameRef.current) {
+            originalUsernameRef.current = userProfile.username;
+          }
         }
       } catch (err) {
         console.error("Failed to load profile:", err);
@@ -105,14 +112,43 @@ export default function Dashboard() {
     return () => { cancelled = true; };
   }, [address, isConnected, isAuthenticated, isAuthenticating, navigate]);
 
-  // Debounced auto-save
+  // Debounced auto-save with dirty tracking and username rename support
   const debouncedSave = useCallback((profileToSave: Profile) => {
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     const version = ++saveVersionRef.current;
     saveTimeoutRef.current = setTimeout(async () => {
       if (version !== saveVersionRef.current) return; // superseded by newer save
       try {
-        await saveProfile(profileToSave);
+        // Check for username rename
+        if (profileToSave.username !== originalUsernameRef.current && originalUsernameRef.current) {
+          await firestoreService.renameProfile(originalUsernameRef.current, profileToSave.username, addressRef.current!);
+          originalUsernameRef.current = profileToSave.username;
+          await firestoreService.saveProfile(profileToSave);
+          dirtyPagesRef.current.clear();
+          dirtyBlocksRef.current.clear();
+          return;
+        }
+
+        // Save profile metadata (always cheap, one write)
+        await firestoreService.saveProfile(profileToSave);
+
+        // Save only dirty pages
+        for (const pageId of dirtyPagesRef.current) {
+          const page = profileToSave.pages.find(p => p.id === pageId);
+          if (page) await firestoreService.savePage(profileToSave.username, page);
+        }
+
+        // Save only dirty blocks whose page isn't already being saved (page save includes all blocks)
+        for (const key of dirtyBlocksRef.current) {
+          const [pageId, blockId] = key.split("::");
+          if (dirtyPagesRef.current.has(pageId)) continue;
+          const page = profileToSave.pages.find(p => p.id === pageId);
+          const block = page?.blocks.find(b => b.id === blockId);
+          if (block) await firestoreService.saveBlock(profileToSave.username, pageId, block);
+        }
+
+        dirtyPagesRef.current.clear();
+        dirtyBlocksRef.current.clear();
       } catch (err) {
         console.error("Auto-save failed:", err);
         toast.error("Auto-save failed");
@@ -127,6 +163,9 @@ export default function Dashboard() {
     };
   }, []);
 
+  // Keep addressRef in sync
+  useEffect(() => { addressRef.current = address; }, [address]);
+
   const currentPage = profile?.pages.find((p) => p.id === currentPageId);
 
   const handleSave = async () => {
@@ -135,6 +174,12 @@ export default function Dashboard() {
     setIsSaving(true);
     setSaveError(null);
     try {
+      if (profile.username !== originalUsernameRef.current && originalUsernameRef.current) {
+        await firestoreService.renameProfile(originalUsernameRef.current, profile.username, addressRef.current!);
+        originalUsernameRef.current = profile.username;
+        dirtyPagesRef.current.clear();
+        dirtyBlocksRef.current.clear();
+      }
       await saveProfile(profile);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Save failed";
@@ -162,6 +207,7 @@ export default function Dashboard() {
       createdAt: Date.now(),
       updatedAt: Date.now(),
     };
+    dirtyPagesRef.current.add(newPage.id);
     updateProfile({ ...profile, pages: [...profile.pages, newPage] });
     setCurrentPageId(newPage.id);
   };
@@ -188,6 +234,7 @@ export default function Dashboard() {
 
   const handleToggleFavorite = (pageId: string) => {
     if (!profile) return;
+    dirtyPagesRef.current.add(pageId);
     updateProfile({
       ...profile,
       pages: profile.pages.map((p) =>
@@ -238,6 +285,7 @@ export default function Dashboard() {
       height: 1,
       position: currentPage.blocks.length,
     };
+    dirtyBlocksRef.current.add(`${currentPageId}::${newBlock.id}`);
     updateProfile({
       ...profile,
       pages: profile.pages.map((p) =>
@@ -266,6 +314,7 @@ export default function Dashboard() {
 
   const handleUpdateBlock = (updatedBlock: Block) => {
     if (!profile) return;
+    dirtyBlocksRef.current.add(`${currentPageId}::${updatedBlock.id}`);
     updateProfile({
       ...profile,
       pages: profile.pages.map((p) =>
@@ -290,6 +339,7 @@ export default function Dashboard() {
       toast.error("Failed to delete block");
       return;
     }
+    dirtyPagesRef.current.add(currentPageId);
     updateProfile({
       ...profile,
       pages: profile.pages.map((p) =>
@@ -681,6 +731,7 @@ export default function Dashboard() {
               <ThemeEditor
                 profile={profile}
                 onUpdate={(updatedProfile) => {
+                  dirtyPagesRef.current.add(currentPageId);
                   updateProfile({
                     ...updatedProfile,
                     pages: updatedProfile.pages.map((p) =>

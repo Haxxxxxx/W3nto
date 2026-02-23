@@ -195,27 +195,88 @@ export default function UserProfile() {
     }
 
     // Video Block
-    if (block.type === "video" && block.url) {
+    if (block.type === "video") {
+      const videoUrl = block.url;
+      if (videoUrl) {
+        const youtubeMatch = videoUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]+)/);
+        const vimeoMatch = videoUrl.match(/vimeo\.com\/(\d+)/);
+        if (youtubeMatch) {
+          return (
+            <iframe
+              src={`https://www.youtube.com/embed/${youtubeMatch[1]}`}
+              className="w-full h-full rounded-xl"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              title={block.title || "Video"}
+            />
+          );
+        }
+        if (vimeoMatch) {
+          return (
+            <iframe
+              src={`https://player.vimeo.com/video/${vimeoMatch[1]}`}
+              className="w-full h-full rounded-xl"
+              allow="autoplay; fullscreen; picture-in-picture"
+              allowFullScreen
+              title={block.title || "Video"}
+            />
+          );
+        }
+        return (
+          <video
+            src={videoUrl}
+            controls
+            className="w-full h-full object-cover rounded-xl"
+            title={block.title || "Video"}
+          />
+        );
+      }
       return (
-        <div className="absolute inset-0 flex flex-col items-center justify-center p-4">
-          <div className="text-4xl mb-2">🎥</div>
-          <div className="text-base mb-1">{block.title}</div>
-          {block.content && (
-            <div className="text-sm opacity-75 line-clamp-2">{block.content}</div>
-          )}
+        <div className="absolute inset-0 flex flex-col items-center justify-center h-full text-center p-4 opacity-60">
+          <span className="text-3xl mb-2">🎥</span>
+          <span className="text-sm font-medium">{block.title || "Video"}</span>
         </div>
       );
     }
 
     // Music Block
     if (block.type === "music") {
+      const musicUrl = block.url;
+      if (musicUrl) {
+        const spotifyMatch = musicUrl.match(/open\.spotify\.com\/(track|album|playlist)\/([a-zA-Z0-9]+)/);
+        if (spotifyMatch) {
+          return (
+            <iframe
+              src={`https://open.spotify.com/embed/${spotifyMatch[1]}/${spotifyMatch[2]}`}
+              className="w-full h-full rounded-xl"
+              allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+              allowFullScreen
+              title={block.title || "Music"}
+            />
+          );
+        }
+        if (musicUrl.includes("soundcloud.com")) {
+          return (
+            <iframe
+              src={`https://w.soundcloud.com/player/?url=${encodeURIComponent(musicUrl)}&color=%23ff5500&auto_play=false&hide_related=true&show_comments=false&show_user=true&show_reposts=false&show_teaser=false&visual=true`}
+              className="w-full h-full rounded-xl"
+              allow="autoplay"
+              title={block.title || "Music"}
+            />
+          );
+        }
+        return (
+          <div className="absolute inset-0 flex flex-col items-center justify-center h-full p-4">
+            <span className="text-2xl mb-3">🎵</span>
+            <span className="text-sm font-medium mb-2">{block.title || "Music"}</span>
+            <audio src={musicUrl} controls className="w-full max-w-[200px]" />
+          </div>
+        );
+      }
       return (
-        <div className="absolute inset-0 flex flex-col items-center justify-center p-4">
-          <div className="text-4xl mb-2">🎵</div>
-          <div className="text-base mb-1">{block.title}</div>
-          {block.content && (
-            <div className="text-sm opacity-75 line-clamp-2">{block.content}</div>
-          )}
+        <div className="absolute inset-0 flex flex-col items-center justify-center h-full text-center p-4 opacity-60">
+          <span className="text-3xl mb-2">🎵</span>
+          <span className="text-sm font-medium">{block.title || "Music"}</span>
         </div>
       );
     }

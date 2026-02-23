@@ -86,27 +86,72 @@ export async function deleteProfile(username: string): Promise<void> {
   await deleteDoc(doc(db, "profiles", username));
 }
 
+export async function renameProfile(oldUsername: string, newUsername: string, uid: string): Promise<void> {
+  const oldRef = doc(db, "profiles", oldUsername);
+  const newRef = doc(db, "profiles", newUsername);
+
+  // 1. Check new username isn't taken
+  const newSnap = await getDoc(newRef);
+  if (newSnap.exists()) throw new Error("Username already taken");
+
+  // 2. Read old profile
+  const oldSnap = await getDoc(oldRef);
+  if (!oldSnap.exists()) throw new Error("Profile not found");
+  const profileData = oldSnap.data();
+  if (profileData.uid !== uid) throw new Error("Not authorized");
+
+  // 3. Copy profile doc to new username
+  await setDoc(newRef, { ...profileData, username: newUsername, updatedAt: serverTimestamp() });
+
+  // 4. Copy all pages and their blocks
+  const pagesSnap = await getDocs(collection(db, "profiles", oldUsername, "pages"));
+  for (const pageDoc of pagesSnap.docs) {
+    const pageRef = doc(db, "profiles", newUsername, "pages", pageDoc.id);
+    await setDoc(pageRef, pageDoc.data());
+    const blocksSnap = await getDocs(collection(db, "profiles", oldUsername, "pages", pageDoc.id, "blocks"));
+    for (const blockDoc of blocksSnap.docs) {
+      await setDoc(doc(db, "profiles", newUsername, "pages", pageDoc.id, "blocks", blockDoc.id), blockDoc.data());
+    }
+  }
+
+  // 5. Update wallet reverse lookup
+  if (profileData.walletAddress) {
+    await setDoc(doc(db, "wallets", profileData.walletAddress), {
+      username: newUsername, uid, updatedAt: serverTimestamp()
+    }, { merge: true });
+  }
+
+  // 6. Delete old profile and subcollections
+  for (const pageDoc of pagesSnap.docs) {
+    const blocksSnap = await getDocs(collection(db, "profiles", oldUsername, "pages", pageDoc.id, "blocks"));
+    for (const blockDoc of blocksSnap.docs) {
+      await deleteDoc(blockDoc.ref);
+    }
+    await deleteDoc(pageDoc.ref);
+  }
+  await deleteDoc(oldRef);
+}
+
 // --- Pages ---
 
 export async function getPages(username: string): Promise<BentoPage[]> {
   const snap = await getDocs(collection(db, "profiles", username, "pages"));
-  const pages: BentoPage[] = [];
-
-  for (const pageDoc of snap.docs) {
-    const data = pageDoc.data();
-    const blocks = await getBlocks(username, pageDoc.id);
-    pages.push({
-      id: pageDoc.id,
-      name: data.name ?? "",
-      slug: data.slug ?? "",
-      blocks,
-      theme: data.theme ?? defaultTheme(),
-      isFavorite: data.isFavorite ?? false,
-      createdAt: data.createdAt?.toMillis?.() ?? Date.now(),
-      updatedAt: data.updatedAt?.toMillis?.() ?? Date.now(),
-    });
-  }
-
+  const pages = await Promise.all(
+    snap.docs.map(async (pageDoc) => {
+      const data = pageDoc.data();
+      const blocks = await getBlocks(username, pageDoc.id);
+      return {
+        id: pageDoc.id,
+        name: data.name ?? "",
+        slug: data.slug ?? "",
+        blocks,
+        theme: data.theme ?? defaultTheme(),
+        isFavorite: data.isFavorite ?? false,
+        createdAt: data.createdAt?.toMillis?.() ?? Date.now(),
+        updatedAt: data.updatedAt?.toMillis?.() ?? Date.now(),
+      } as BentoPage;
+    })
+  );
   return pages;
 }
 

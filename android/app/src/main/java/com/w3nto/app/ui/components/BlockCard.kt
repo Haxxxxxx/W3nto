@@ -9,6 +9,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -47,18 +48,23 @@ fun BlockCard(
                 "gradient" -> {
                     val gradient = block.bgGradient
                     if (gradient != null) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(
-                                    brush = Brush.horizontalGradient(
-                                        colors = listOf(
-                                            parseColor(gradient.from),
-                                            parseColor(gradient.to)
-                                        )
-                                    )
-                                )
-                        )
+                        val colors = listOf(parseColor(gradient.from), parseColor(gradient.to))
+                        val brush = when (gradient.direction) {
+                            "to-b" -> Brush.verticalGradient(colors)
+                            "to-br" -> Brush.linearGradient(
+                                colors = colors,
+                                start = Offset.Zero,
+                                end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)
+                            )
+                            "to-tr" -> Brush.linearGradient(
+                                colors = colors,
+                                start = Offset(0f, Float.POSITIVE_INFINITY),
+                                end = Offset(Float.POSITIVE_INFINITY, 0f)
+                            )
+                            "radial" -> Brush.radialGradient(colors)
+                            else -> Brush.horizontalGradient(colors)
+                        }
+                        Box(modifier = Modifier.fillMaxSize().background(brush = brush))
                     } else {
                         Box(modifier = Modifier.fillMaxSize().background(bgColor))
                     }
