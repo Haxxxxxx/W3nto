@@ -9,7 +9,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.border
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontFamily
@@ -40,6 +42,7 @@ fun ProfileHeader(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         // Avatar
+        val avatarBorderColor = textColor.copy(alpha = 0.2f)
         if (profile.avatar.isNotEmpty()) {
             AsyncImage(
                 model = ImageRequest.Builder(LocalContext.current)
@@ -49,6 +52,8 @@ fun ProfileHeader(
                 contentDescription = "Avatar",
                 modifier = Modifier
                     .size(96.dp)
+                    .shadow(8.dp, CircleShape)
+                    .border(4.dp, avatarBorderColor, CircleShape)
                     .clip(CircleShape),
                 contentScale = ContentScale.Crop
             )
@@ -56,6 +61,8 @@ fun ProfileHeader(
             Box(
                 modifier = Modifier
                     .size(96.dp)
+                    .shadow(8.dp, CircleShape)
+                    .border(4.dp, avatarBorderColor, CircleShape)
                     .clip(CircleShape)
                     .background(
                         Brush.linearGradient(
@@ -81,7 +88,7 @@ fun ProfileHeader(
         // Display name
         Text(
             text = profile.displayName.ifEmpty { "@${profile.username}" },
-            fontSize = 28.sp,
+            fontSize = 32.sp,
             fontWeight = FontWeight.Bold,
             color = textColor
         )
@@ -91,7 +98,7 @@ fun ProfileHeader(
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = profile.bio,
-                fontSize = 15.sp,
+                fontSize = 16.sp,
                 color = textColor.copy(alpha = 0.8f),
                 maxLines = 3,
                 overflow = TextOverflow.Ellipsis,

@@ -16,6 +16,7 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.border
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -172,7 +173,7 @@ private fun ProfileCard(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Row(
             modifier = Modifier
@@ -187,6 +188,7 @@ private fun ProfileCard(
                     contentDescription = stringResource(R.string.content_description_avatar, profile.displayName),
                     modifier = Modifier
                         .size(56.dp)
+                        .border(2.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.25f), CircleShape)
                         .clip(CircleShape),
                     contentScale = ContentScale.Crop
                 )
@@ -194,6 +196,7 @@ private fun ProfileCard(
                 Box(
                     modifier = Modifier
                         .size(56.dp)
+                        .border(2.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.25f), CircleShape)
                         .clip(CircleShape)
                         .background(MaterialTheme.colorScheme.primaryContainer),
                     contentAlignment = Alignment.Center
@@ -248,7 +251,7 @@ private fun ProfileCard(
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = profile.bio,
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
@@ -265,7 +268,7 @@ private fun ProfileCard(
 
 @Composable
 private fun WalletBadge(walletAddress: String) {
-    val shortened = walletAddress.take(4) + "..." + walletAddress.takeLast(4)
+    val shortened = walletAddress.take(6) + "..." + walletAddress.takeLast(4)
     Surface(
         shape = RoundedCornerShape(6.dp),
         color = MaterialTheme.colorScheme.secondaryContainer

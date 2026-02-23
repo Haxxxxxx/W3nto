@@ -26,6 +26,7 @@ data class PublicProfileUiState(
     val currentPage: BentoPage? = null,
     val blocks: List<Block> = emptyList(),
     val isLoading: Boolean = true,
+    val isRefreshing: Boolean = false,
     val notFound: Boolean = false,
     val error: String? = null,
     val isFavorited: Boolean = false
@@ -54,6 +55,54 @@ class ProfileViewModel @Inject constructor(
     fun retryLoad() {
         _uiState.value = PublicProfileUiState()
         loadProfile()
+    }
+
+    fun refresh() {
+        if (_uiState.value.isRefreshing) return
+        _uiState.value = _uiState.value.copy(isRefreshing = true, error = null)
+        viewModelScope.launch {
+            val result = profileRepository.getProfile(username)
+
+            result.onFailure { e ->
+                _uiState.value = _uiState.value.copy(
+                    isRefreshing = false,
+                    error = e.message ?: "Failed to refresh profile"
+                )
+                return@launch
+            }
+
+            val profile = result.getOrNull()
+            if (profile == null) {
+                _uiState.value = _uiState.value.copy(isRefreshing = false, notFound = true)
+                return@launch
+            }
+
+            val pagesResult = pageRepository.getPages(username)
+            val pages = pagesResult.getOrDefault(emptyList())
+
+            val currentPageId = _uiState.value.currentPage?.id ?: profile.defaultPageId
+            val currentPage = pages.find { it.id == currentPageId }
+                ?: pages.find { it.id == profile.defaultPageId }
+                ?: pages.firstOrNull()
+
+            val blocks = if (currentPage != null) {
+                blockRepository.getBlocks(username, currentPage.id).getOrDefault(emptyList())
+            } else {
+                emptyList()
+            }
+
+            _uiState.value = _uiState.value.copy(
+                profile = profile,
+                pages = pages,
+                currentPage = currentPage,
+                blocks = blocks,
+                isRefreshing = false
+            )
+
+            if (currentPage != null) {
+                checkPageFavorited(currentPage.id)
+            }
+        }
     }
 
     private fun loadProfile() {

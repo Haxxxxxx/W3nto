@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.WifiOff
 import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -310,10 +311,16 @@ fun PublicProfileScreen(
 
             uiState.profile != null -> {
                 val profile = uiState.profile!!
-                Column(
+                PullToRefreshBox(
+                    isRefreshing = uiState.isRefreshing,
+                    onRefresh = { viewModel.refresh() },
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(padding)
+                ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
                         .background(bgColor)
                         .verticalScroll(rememberScrollState())
                 ) {
@@ -374,6 +381,7 @@ fun PublicProfileScreen(
                         )
                     }
                 }
+                } // closes PullToRefreshBox
             }
         }
     }
