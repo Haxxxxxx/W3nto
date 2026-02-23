@@ -1,5 +1,11 @@
 package com.w3nto.app.ui.screens.myprofile
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -403,30 +409,37 @@ private fun ProfileContent(
                 }
             }
 
-            // Blocks grid
-            if (uiState.blocks.isNotEmpty()) {
-                item {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    BentoGrid(
-                        blocks = uiState.blocks,
-                        theme = uiState.selectedPage?.theme ?: uiState.profile?.theme
-                            ?: com.w3nto.app.data.model.Theme(),
-                        modifier = Modifier.padding(horizontal = 16.dp)
-                    )
-                }
-            } else {
-                item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(32.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "No blocks on this page yet",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+            // Animated blocks grid — slides in/out when page changes
+            item {
+                Spacer(modifier = Modifier.height(12.dp))
+                AnimatedContent(
+                    targetState = uiState.selectedPage?.id to uiState.blocks,
+                    transitionSpec = {
+                        (slideInHorizontally { width -> width / 4 } + fadeIn()) togetherWith
+                            (slideOutHorizontally { width -> -width / 4 } + fadeOut())
+                    },
+                    label = "page_blocks_transition"
+                ) { (_, blocks) ->
+                    if (blocks.isNotEmpty()) {
+                        BentoGrid(
+                            blocks = blocks,
+                            theme = uiState.selectedPage?.theme ?: uiState.profile?.theme
+                                ?: com.w3nto.app.data.model.Theme(),
+                            modifier = Modifier.padding(horizontal = 16.dp)
                         )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(32.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "No blocks on this page yet",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             }

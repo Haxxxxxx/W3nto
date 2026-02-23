@@ -18,6 +18,7 @@ import javax.inject.Inject
 data class FavoritesUiState(
     val favorites: List<FavoritePage> = emptyList(),
     val isLoading: Boolean = true,
+    val isRefreshing: Boolean = false,
     val error: String? = null,
     val requiresAuth: Boolean = false
 )
@@ -39,6 +40,25 @@ class FavoritesViewModel @Inject constructor(
                 .drop(1)
                 .distinctUntilChanged { old, new -> old?.uid == new?.uid }
                 .collect { loadFavorites() }
+        }
+    }
+
+    fun refresh() {
+        val userId = auth.currentUser?.uid ?: return
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isRefreshing = true, error = null)
+            val result = favoritesRepository.getPageFavorites(userId)
+            result.fold(
+                onSuccess = { favorites ->
+                    _uiState.value = _uiState.value.copy(favorites = favorites, isRefreshing = false)
+                },
+                onFailure = { error ->
+                    _uiState.value = _uiState.value.copy(
+                        isRefreshing = false,
+                        error = error.message ?: "Failed to refresh favorites"
+                    )
+                }
+            )
         }
     }
 

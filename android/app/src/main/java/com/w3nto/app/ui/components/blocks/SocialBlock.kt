@@ -49,10 +49,11 @@ fun SocialBlock(block: Block, textColor: Color) {
                 Text(text = block.icon, fontSize = 36.sp)
             }
             else -> {
+                val brandColor = getSocialBrandColor(block.socialPlatform)
                 Icon(
                     imageVector = getSocialIcon(block.socialPlatform),
                     contentDescription = block.socialPlatform?.displayName,
-                    tint = textColor,
+                    tint = brandColor ?: textColor,
                     modifier = Modifier.size(36.dp)
                 )
             }
@@ -67,6 +68,27 @@ fun SocialBlock(block: Block, textColor: Color) {
             overflow = TextOverflow.Ellipsis
         )
     }
+}
+
+private fun getSocialBrandColor(platform: SocialPlatform?): Color? = when (platform) {
+    SocialPlatform.TWITTER -> Color(0xFF1DA1F2)
+    SocialPlatform.INSTAGRAM -> Color(0xFFE1306C)
+    SocialPlatform.TIKTOK -> Color(0xFF010101)
+    SocialPlatform.YOUTUBE -> Color(0xFFFF0000)
+    SocialPlatform.LINKEDIN -> Color(0xFF0A66C2)
+    SocialPlatform.GITHUB -> Color(0xFF6E40C9)
+    SocialPlatform.DISCORD -> Color(0xFF5865F2)
+    SocialPlatform.TELEGRAM -> Color(0xFF2CA5E0)
+    SocialPlatform.TWITCH -> Color(0xFF9146FF)
+    SocialPlatform.SNAPCHAT -> Color(0xFFFFFC00)
+    SocialPlatform.FACEBOOK -> Color(0xFF1877F2)
+    SocialPlatform.REDDIT -> Color(0xFFFF4500)
+    SocialPlatform.MEDIUM -> Color(0xFF02B875)
+    SocialPlatform.SPOTIFY -> Color(0xFF1DB954)
+    SocialPlatform.SOUNDCLOUD -> Color(0xFFFF5500)
+    SocialPlatform.BEHANCE -> Color(0xFF1769FF)
+    SocialPlatform.DRIBBBLE -> Color(0xFFEA4C89)
+    SocialPlatform.CUSTOM, null -> null
 }
 
 private fun getSocialIcon(platform: SocialPlatform?): ImageVector = when (platform) {

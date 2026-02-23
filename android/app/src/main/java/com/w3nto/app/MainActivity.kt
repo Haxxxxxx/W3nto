@@ -11,6 +11,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import com.solana.mobilewalletadapter.clientlib.ActivityResultSender
 import com.w3nto.app.data.repository.AuthRepository
+import com.w3nto.app.data.repository.ProfileRepository
 import com.w3nto.app.ui.navigation.NavGraph
 import com.w3nto.app.ui.theme.W3ntoTheme
 import com.w3nto.app.wallet.WalletManager
@@ -29,6 +30,9 @@ class MainActivity : ComponentActivity() {
 
     @Inject
     lateinit var authRepository: AuthRepository
+
+    @Inject
+    lateinit var profileRepository: ProfileRepository
 
     private lateinit var activityResultSender: ActivityResultSender
 
@@ -55,6 +59,7 @@ class MainActivity : ComponentActivity() {
                     NavGraph(
                         walletManager = walletManager,
                         authRepository = authRepository,
+                        profileRepository = profileRepository,
                         activityResultSender = activityResultSender,
                         pendingDeepLinkRoute = pendingDeepLinkRoute,
                         onDeepLinkConsumed = { consumeDeepLinkRoute() }

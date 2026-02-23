@@ -12,6 +12,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -22,7 +23,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
+import com.google.firebase.Timestamp
 import com.w3nto.app.data.model.FavoritePage
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,25 +50,31 @@ fun FavoritesScreen(
                 AuthRequiredState()
             }
 
-            uiState.favorites.isEmpty() -> {
+            uiState.favorites.isEmpty() && !uiState.isRefreshing -> {
                 EmptyFavoritesState()
             }
 
             else -> {
-                LazyColumn(
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                PullToRefreshBox(
+                    isRefreshing = uiState.isRefreshing,
+                    onRefresh = { viewModel.refresh() },
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    items(
-                        items = uiState.favorites,
-                        key = { "${it.username}:::${it.pageId}" }
-                    ) { fav ->
-                        SwipeToDeleteFavoriteItem(
-                            favorite = fav,
-                            onDelete = { viewModel.removeFavorite(fav.username, fav.pageId) },
-                            onClick = { onPageClick(fav.username, fav.pageSlug) }
-                        )
+                    LazyColumn(
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        items(
+                            items = uiState.favorites,
+                            key = { "${it.username}:::${it.pageId}" }
+                        ) { fav ->
+                            SwipeToDeleteFavoriteItem(
+                                favorite = fav,
+                                onDelete = { viewModel.removeFavorite(fav.username, fav.pageId) },
+                                onClick = { onPageClick(fav.username, fav.pageSlug) }
+                            )
+                        }
                     }
                 }
             }
@@ -193,8 +204,28 @@ private fun FavoritePageCard(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary
                 )
+                favorite.savedAt?.let { ts ->
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = "Saved ${formatTimestamp(ts)}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                    )
+                }
             }
         }
+    }
+}
+
+private fun formatTimestamp(timestamp: Timestamp): String {
+    val now = System.currentTimeMillis()
+    val diff = now - timestamp.toDate().time
+    return when {
+        diff < 60_000 -> "just now"
+        diff < 3_600_000 -> "${diff / 60_000}m ago"
+        diff < 86_400_000 -> "${diff / 3_600_000}h ago"
+        diff < 7 * 86_400_000L -> "${diff / 86_400_000}d ago"
+        else -> SimpleDateFormat("MMM d, yyyy", Locale.getDefault()).format(Date(timestamp.toDate().time))
     }
 }
 

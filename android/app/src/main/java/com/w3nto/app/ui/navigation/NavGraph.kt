@@ -15,12 +15,14 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.solana.mobilewalletadapter.clientlib.ActivityResultSender
 import com.w3nto.app.data.repository.AuthRepository
+import com.w3nto.app.data.repository.ProfileRepository
 import com.w3nto.app.ui.components.BottomNavBar
 import com.w3nto.app.ui.screens.auth.ConnectWalletScreen
 import com.w3nto.app.ui.screens.discover.DiscoverScreen
 import com.w3nto.app.ui.screens.favorites.FavoritesScreen
 import com.w3nto.app.ui.screens.landing.LandingScreen
 import com.w3nto.app.ui.screens.myprofile.MyProfileScreen
+import com.w3nto.app.ui.screens.onboarding.OnboardingScreen
 import com.w3nto.app.ui.screens.profile.PublicProfileScreen
 import com.w3nto.app.ui.screens.settings.SettingsScreen
 import com.w3nto.app.wallet.WalletManager
@@ -37,6 +39,7 @@ private val bottomNavRoutes = setOf(
 fun NavGraph(
     walletManager: WalletManager,
     authRepository: AuthRepository,
+    profileRepository: ProfileRepository,
     activityResultSender: ActivityResultSender,
     pendingDeepLinkRoute: StateFlow<String?> = kotlinx.coroutines.flow.MutableStateFlow(null),
     onDeepLinkConsumed: () -> Unit = {}
@@ -59,7 +62,11 @@ fun NavGraph(
             val route = navController.currentDestination?.route
             if (route == Screen.Landing.route || route == Screen.ConnectWallet.route) {
                 if (deepLinkRoute == null) {
-                    navController.navigate(Screen.Discover.route) {
+                    // Check if this is a new user (no profile) → onboarding, else → discover
+                    val uid = firebaseUser!!.uid
+                    val hasProfile = profileRepository.getProfileByUid(uid).getOrNull() != null
+                    val destination = if (hasProfile) Screen.Discover.route else Screen.Onboarding.route
+                    navController.navigate(destination) {
                         popUpTo(Screen.Landing.route) { inclusive = true }
                     }
                 }
@@ -124,6 +131,16 @@ fun NavGraph(
                 ConnectWalletScreen(
                     walletManager = walletManager,
                     activityResultSender = activityResultSender
+                )
+            }
+
+            composable(Screen.Onboarding.route) {
+                OnboardingScreen(
+                    onProfileCreated = {
+                        navController.navigate(Screen.Discover.route) {
+                            popUpTo(Screen.Onboarding.route) { inclusive = true }
+                        }
+                    }
                 )
             }
 

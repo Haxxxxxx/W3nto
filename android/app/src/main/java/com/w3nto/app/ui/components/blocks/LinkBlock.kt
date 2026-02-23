@@ -17,15 +17,32 @@ import androidx.compose.ui.platform.LocalContext
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.w3nto.app.data.model.Block
+import java.net.URL
+
+private fun extractDomain(url: String?): String? {
+    if (url.isNullOrBlank()) return null
+    return try {
+        val parsed = URL(url)
+        parsed.host.removePrefix("www.")
+    } catch (_: Exception) {
+        null
+    }
+}
+
+private fun faviconUrl(domain: String): String {
+    return "https://www.google.com/s2/favicons?domain=$domain&sz=64"
+}
 
 @Composable
 fun LinkBlock(block: Block, textColor: Color) {
+    val domain = extractDomain(block.url)
+
     Column(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Icon display: iconImage > icon emoji > no icon
+        // Icon display: iconImage > icon emoji > favicon from URL > no icon
         when {
             !block.iconImage.isNullOrEmpty() -> {
                 AsyncImage(
@@ -43,6 +60,20 @@ fun LinkBlock(block: Block, textColor: Color) {
             }
             !block.icon.isNullOrEmpty() -> {
                 Text(text = block.icon, fontSize = 36.sp)
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+            domain != null -> {
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(faviconUrl(domain))
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(RoundedCornerShape(8.dp)),
+                    contentScale = ContentScale.Fit
+                )
                 Spacer(modifier = Modifier.height(8.dp))
             }
         }
@@ -63,6 +94,15 @@ fun LinkBlock(block: Block, textColor: Color) {
                 color = textColor.copy(alpha = 0.75f),
                 fontSize = 12.sp,
                 maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+        } else if (domain != null) {
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = domain,
+                color = textColor.copy(alpha = 0.5f),
+                fontSize = 11.sp,
+                maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
         }

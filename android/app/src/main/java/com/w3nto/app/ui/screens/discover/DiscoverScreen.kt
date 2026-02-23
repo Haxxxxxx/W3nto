@@ -17,13 +17,17 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.w3nto.app.data.model.Profile
+
+private const val NEW_CREATOR_THRESHOLD_MS = 7 * 24 * 60 * 60 * 1000L // 7 days
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -154,6 +158,10 @@ private fun ProfileCard(
     profile: Profile,
     onClick: () -> Unit
 ) {
+    val isNew = profile.createdAt?.let { ts ->
+        System.currentTimeMillis() - ts.toDate().time < NEW_CREATOR_THRESHOLD_MS
+    } ?: false
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -202,14 +210,33 @@ private fun ProfileCard(
             Spacer(modifier = Modifier.width(16.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = profile.displayName.ifBlank { profile.username },
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = profile.displayName.ifBlank { profile.username },
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+                    if (isNew) {
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = MaterialTheme.colorScheme.tertiaryContainer
+                        ) {
+                            Text(
+                                text = "NEW",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onTertiaryContainer,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 9.sp,
+                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+                }
                 Text(
                     text = "@${profile.username}",
                     style = MaterialTheme.typography.bodySmall,
