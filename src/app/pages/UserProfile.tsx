@@ -15,6 +15,7 @@ export default function UserProfile() {
   const [currentPage, setCurrentPage] = useState<BentoPage | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [networkError, setNetworkError] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [columns, setColumns] = useState(() =>
     typeof window !== "undefined" && window.innerWidth >= 768 ? 4 : 2
@@ -34,6 +35,7 @@ export default function UserProfile() {
     async function loadProfile() {
       setLoading(true);
       setNotFound(false);
+      setNetworkError(false);
 
       try {
         const userProfile = await getProfileByUsername(username!);
@@ -55,9 +57,8 @@ export default function UserProfile() {
           page = userProfile.pages.find((p) => p.id === userProfile.defaultPageId) || userProfile.pages[0];
         }
         setCurrentPage(page || null);
-      } catch (err) {
-        console.error("Failed to load profile:", err);
-        if (!cancelled) setNotFound(true);
+      } catch {
+        if (!cancelled) setNetworkError(true);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -69,10 +70,56 @@ export default function UserProfile() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "#0a0a0a" }}>
-        <div className="text-center">
-          <div className="size-12 border-4 border-gray-700 border-t-purple-500 rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-400">Loading profile...</p>
+      <div className="min-h-screen py-12 px-6" style={{ backgroundColor: "#0a0a0a" }}>
+        <div className="max-w-4xl mx-auto animate-pulse">
+          {/* Profile header skeleton */}
+          <div className="mb-12 text-center">
+            <div className="size-24 md:size-32 rounded-full bg-gray-800 mx-auto mb-6"></div>
+            <div className="h-8 bg-gray-800 rounded-full w-48 mx-auto mb-3"></div>
+            <div className="h-4 bg-gray-800 rounded-full w-72 mx-auto mb-4"></div>
+            <div className="h-8 bg-gray-800 rounded-full w-28 mx-auto"></div>
+          </div>
+          {/* Bento grid skeleton */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 auto-rows-[100px] md:auto-rows-[120px]">
+            {[2, 1, 1, 2, 1, 1, 1, 1].map((span, i) => (
+              <div
+                key={i}
+                className="bg-gray-800 rounded-2xl"
+                style={{ gridColumn: `span ${span}` }}
+              ></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (networkError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center max-w-md">
+          <div className="size-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Grid3x3 className="size-10 text-red-400" />
+          </div>
+          <h1 className="text-3xl mb-3">Connection error</h1>
+          <p className="text-gray-600 mb-8">
+            Couldn't load this profile. Check your connection and try again.
+          </p>
+          <div className="flex items-center justify-center gap-3">
+            <button
+              onClick={() => window.location.reload()}
+              className="px-6 py-3 bg-black text-white rounded-full hover:bg-gray-800 transition-colors inline-flex items-center gap-2"
+            >
+              Try again
+            </button>
+            <button
+              onClick={() => navigate("/")}
+              className="px-6 py-3 border border-gray-200 rounded-full hover:bg-gray-100 transition-colors inline-flex items-center gap-2"
+            >
+              <ArrowLeft className="size-4" />
+              Go Home
+            </button>
+          </div>
         </div>
       </div>
     );

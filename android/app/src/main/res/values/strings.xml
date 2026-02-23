@@ -1,4 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">W3nto</string>
+
+    <!-- Landing screen -->
+    <string name="landing_tagline">Your Web3 Bento Profile</string>
+    <string name="landing_description">Discover Web3 creators and explore their on-chain identities</string>
+    <string name="landing_cta">Get Started</string>
+    <string name="landing_built_for">Built for Solana Seeker</string>
+
+    <!-- Discover screen -->
+    <string name="discover_search_placeholder">Search by username\u2026</string>
+    <string name="discover_search_content_description">Search</string>
+    <string name="discover_empty_search">No creators found for &quot;%s&quot;</string>
+    <string name="discover_empty_default">No creators yet. Check back soon!</string>
+    <string name="discover_retry">Retry</string>
+
+    <!-- Accessibility -->
+    <string name="content_description_avatar">%s avatar</string>
+    <string name="badge_new">NEW</string>
 </resources>

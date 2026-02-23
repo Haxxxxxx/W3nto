@@ -63,7 +63,7 @@ fun NavGraph(
             if (route == Screen.Landing.route || route == Screen.ConnectWallet.route) {
                 if (deepLinkRoute == null) {
                     // Check if this is a new user (no profile) → onboarding, else → discover
-                    val uid = firebaseUser!!.uid
+                    val uid = firebaseUser?.uid ?: return@LaunchedEffect
                     val hasProfile = profileRepository.getProfileByUid(uid).getOrNull() != null
                     val destination = if (hasProfile) Screen.Discover.route else Screen.Onboarding.route
                     navController.navigate(destination) {
@@ -92,8 +92,8 @@ fun NavGraph(
             navController.navigate(route) {
                 launchSingleTop = true
             }
-        } catch (e: Exception) {
-            android.util.Log.e("NavGraph", "Deep link navigation failed: ${e.message}")
+        } catch (_: Exception) {
+            // Navigation failed — deep link consumed anyway
         }
         onDeepLinkConsumed()
     }

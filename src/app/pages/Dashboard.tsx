@@ -100,7 +100,6 @@ export default function Dashboard() {
           }
         }
       } catch (err) {
-        console.error("Failed to load profile:", err);
         setSaveError("Failed to load profile");
         toast.error("Failed to load profile");
       } finally {
@@ -150,7 +149,6 @@ export default function Dashboard() {
         dirtyPagesRef.current.clear();
         dirtyBlocksRef.current.clear();
       } catch (err) {
-        console.error("Auto-save failed:", err);
         toast.error("Auto-save failed");
       }
     }, 2000);
@@ -227,8 +225,7 @@ export default function Dashboard() {
     if (!profile) return;
     try {
       await firestoreService.deletePage(profile.username, pageId);
-    } catch (err) {
-      console.error(err);
+    } catch {
       toast.error("Failed to delete page");
       return;
     }
@@ -345,8 +342,7 @@ export default function Dashboard() {
     if (!profile || !window.confirm("Delete this block?")) return;
     try {
       await firestoreService.deleteBlock(profile.username, currentPageId, blockId);
-    } catch (err) {
-      console.error(err);
+    } catch {
       toast.error("Failed to delete block");
       return;
     }
@@ -476,7 +472,7 @@ export default function Dashboard() {
             <button
               onClick={handleSave}
               disabled={isSaving}
-              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2 disabled:opacity-50"
+              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Save className="size-4" />
               {isSaving ? "Saving..." : "Save"}

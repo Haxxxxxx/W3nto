@@ -11,9 +11,11 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.w3nto.app.R
 import com.w3nto.app.ui.theme.Purple300
 import com.w3nto.app.ui.theme.Purple500
 import com.w3nto.app.ui.theme.Pink500
@@ -56,7 +58,7 @@ fun LandingScreen(onConnectWallet: () -> Unit) {
             Spacer(modifier = Modifier.height(12.dp))
 
             Text(
-                text = "Your Web3 Bento Profile",
+                text = stringResource(R.string.landing_tagline),
                 fontSize = 22.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = Color.White,
@@ -66,7 +68,7 @@ fun LandingScreen(onConnectWallet: () -> Unit) {
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = "Discover Web3 creators and explore their on-chain identities",
+                text = stringResource(R.string.landing_description),
                 fontSize = 16.sp,
                 color = Color.White.copy(alpha = 0.6f),
                 textAlign = TextAlign.Center,
@@ -88,7 +90,7 @@ fun LandingScreen(onConnectWallet: () -> Unit) {
                 )
             ) {
                 Text(
-                    text = "Get Started",
+                    text = stringResource(R.string.landing_cta),
                     fontSize = 17.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = Color.White
@@ -98,7 +100,7 @@ fun LandingScreen(onConnectWallet: () -> Unit) {
             Spacer(modifier = Modifier.height(20.dp))
 
             Text(
-                text = "Built for Solana Seeker",
+                text = stringResource(R.string.landing_built_for),
                 fontSize = 13.sp,
                 color = Color.White.copy(alpha = 0.4f)
             )

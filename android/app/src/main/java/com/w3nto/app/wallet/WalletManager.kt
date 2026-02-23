@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
-import android.util.Log
 import com.google.firebase.functions.FirebaseFunctions
 import com.solana.mobilewalletadapter.clientlib.ActivityResultSender
 import com.w3nto.app.data.repository.AuthRepository
@@ -122,7 +121,6 @@ class WalletManager @Inject constructor(
             } catch (e: Exception) {
                 _isConnecting.value = false
                 _error.value = "Failed to process Phantom connect response: ${e.message}"
-                Log.e("WalletManager", "Phantom connect error", e)
             }
         } else {
             val publicKey = uri.getQueryParameter("public_key")
@@ -165,7 +163,6 @@ class WalletManager @Inject constructor(
         } catch (e: Exception) {
             _isConnecting.value = false
             _error.value = "Failed to process sign response: ${e.message}"
-            Log.e("WalletManager", "Phantom sign error", e)
         } finally {
             pendingPublicKey = null
             pendingPhantomEncryptionPubKey = null
@@ -189,7 +186,6 @@ class WalletManager @Inject constructor(
         } catch (e: Exception) {
             _isConnecting.value = false
             _error.value = e.message ?: "Failed to connect Saga Seed Vault"
-            Log.e("WalletManager", "Saga MWA error", e)
         }
     }
 
@@ -225,7 +221,6 @@ class WalletManager @Inject constructor(
             )
         } catch (e: Exception) {
             _error.value = "Firebase authentication failed: ${e.message}"
-            Log.e("WalletManager", "Firebase auth error", e)
         } finally {
             _isConnecting.value = false
         }

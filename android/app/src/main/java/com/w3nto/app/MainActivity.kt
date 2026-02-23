@@ -43,7 +43,6 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val defaultUncaughtExceptionHandler = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
-            android.util.Log.e("W3nto", "Uncaught exception on ${thread.name}", throwable)
             defaultUncaughtExceptionHandler?.uncaughtException(thread, throwable)
         }
         activityResultSender = ActivityResultSender(this)

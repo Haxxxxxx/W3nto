@@ -19,11 +19,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.w3nto.app.R
 import coil.compose.AsyncImage
 import com.w3nto.app.data.model.Profile
 
@@ -61,9 +63,9 @@ fun DiscoverScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 12.dp),
-            placeholder = { Text("Search by username...") },
+            placeholder = { Text(stringResource(R.string.discover_search_placeholder)) },
             leadingIcon = {
-                Icon(Icons.Default.Search, contentDescription = "Search")
+                Icon(Icons.Default.Search, contentDescription = stringResource(R.string.discover_search_content_description))
             },
             singleLine = true,
             shape = RoundedCornerShape(12.dp)
@@ -86,7 +88,7 @@ fun DiscoverScreen(
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Button(onClick = { viewModel.refresh() }) {
-                            Text("Retry")
+                            Text(stringResource(R.string.discover_retry))
                         }
                     }
                 }
@@ -136,9 +138,9 @@ fun DiscoverScreen(
                                 ) {
                                     Text(
                                         text = if (uiState.searchQuery.isNotBlank()) {
-                                            "No creators found for \"${uiState.searchQuery}\""
+                                            stringResource(R.string.discover_empty_search, uiState.searchQuery)
                                         } else {
-                                            "No creators yet. Check back soon!"
+                                            stringResource(R.string.discover_empty_default)
                                         },
                                         style = MaterialTheme.typography.bodyLarge,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -182,7 +184,7 @@ private fun ProfileCard(
             if (profile.avatar.isNotEmpty()) {
                 AsyncImage(
                     model = profile.avatar,
-                    contentDescription = "${profile.displayName} avatar",
+                    contentDescription = stringResource(R.string.content_description_avatar, profile.displayName),
                     modifier = Modifier
                         .size(56.dp)
                         .clip(CircleShape),

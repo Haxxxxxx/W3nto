@@ -131,7 +131,6 @@ function WalletAuthBridge({ children }: { children: ReactNode }) {
       await signInWithCustomToken(auth, result.data.token);
       authedWalletRef.current = publicKey.toBase58();
     } catch (err) {
-      console.error("Auth failed:", err);
       const msg = err instanceof Error ? err.message : "Authentication failed";
       setAuthError(msg);
       toast.error("Authentication failed", { description: msg });
@@ -165,7 +164,7 @@ function WalletAuthBridge({ children }: { children: ReactNode }) {
   const disconnect = useCallback(() => {
     authedWalletRef.current = null;
     walletDisconnect();
-    signOut(auth).catch((err) => console.error("Sign out error:", err));
+    signOut(auth).catch(() => {});
     setAuthError(null);
   }, [walletDisconnect]);
 

@@ -154,7 +154,6 @@ class ProfileViewModel @Inject constructor(
                 favoritesRepository.addPageFavorite(userId, favorite)
             }
             result.onFailure { e ->
-                android.util.Log.e("ProfileViewModel", "Failed to toggle favorite", e)
                 // Revert on failure
                 _uiState.value = _uiState.value.copy(
                     isFavorited = currentlyFavorited,
