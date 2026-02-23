@@ -45,8 +45,7 @@ import com.w3nto.app.ui.theme.Error
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PublicProfileScreen(
-    username: String,
-    pageSlug: String?,
+    slug: String,
     onBack: () -> Unit,
     viewModel: ProfileViewModel = hiltViewModel()
 ) {
@@ -75,7 +74,7 @@ fun PublicProfileScreen(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text("$username.skr", color = textColor) },
+                title = { Text(uiState.profile?.let { "${it.username}.skr" } ?: "$slug.skr", color = textColor) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = textColor)
@@ -94,11 +93,15 @@ fun PublicProfileScreen(
                         )
                     }
                     IconButton(onClick = {
+                        val profileUsername = uiState.profile?.username ?: slug
                         val currentPage = uiState.currentPage
-                        val shareUrl = if (currentPage != null) {
-                            "https://w3nto.app/$username/${currentPage.slug}"
+                        val pages = uiState.pages
+                        val defaultPageId = uiState.profile?.defaultPageId
+                        val shareUrl = if (currentPage != null && currentPage.slug.isNotEmpty()
+                            && pages.size > 1 && currentPage.id != defaultPageId) {
+                            "https://w3nto.app/${currentPage.slug}"
                         } else {
-                            "https://w3nto.app/$username"
+                            "https://w3nto.app/$profileUsername"
                         }
                         val shareIntent = Intent(Intent.ACTION_SEND).apply {
                             type = "text/plain"
@@ -287,7 +290,7 @@ fun PublicProfileScreen(
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        text = "\"$username\" doesn't exist or hasn't been created yet.",
+                        text = "\"$slug\" doesn't exist or hasn't been created yet.",
                         fontSize = 15.sp,
                         color = textColor.copy(alpha = 0.6f),
                         textAlign = TextAlign.Center,

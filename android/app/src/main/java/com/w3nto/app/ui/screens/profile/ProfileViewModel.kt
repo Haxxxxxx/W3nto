@@ -43,8 +43,12 @@ class ProfileViewModel @Inject constructor(
     private val auth: FirebaseAuth
 ) : ViewModel() {
 
-    private val username: String = savedStateHandle["username"] ?: ""
-    private val pageSlug: String? = savedStateHandle["pageSlug"]
+    // The raw URL slug (may be a username or a page slug)
+    private val slug: String = savedStateHandle["slug"] ?: ""
+
+    // Resolved after slug lookup: actual profile username and optional target page ID
+    private var resolvedUsername: String = ""
+    private var targetPageId: String? = null
 
     private val _uiState = MutableStateFlow(PublicProfileUiState())
     val uiState: StateFlow<PublicProfileUiState> = _uiState.asStateFlow()
@@ -55,11 +59,14 @@ class ProfileViewModel @Inject constructor(
 
     fun retryLoad() {
         _uiState.value = PublicProfileUiState()
+        resolvedUsername = ""
+        targetPageId = null
         loadProfile()
     }
 
     fun refresh() {
         if (_uiState.value.isRefreshing) return
+        val username = resolvedUsername.ifEmpty { return }
         _uiState.value = _uiState.value.copy(isRefreshing = true, error = null)
         viewModelScope.launch {
             val result = profileRepository.getProfile(username)
@@ -109,7 +116,27 @@ class ProfileViewModel @Inject constructor(
 
     private fun loadProfile() {
         viewModelScope.launch {
-            val result = profileRepository.getProfile(username)
+            // Step 1: Resolve the slug (page slug → username+pageId, or username fallback)
+            val resolveResult = profileRepository.resolveSlug(slug)
+            resolveResult.onFailure { e ->
+                _uiState.value = PublicProfileUiState(
+                    isLoading = false,
+                    error = e.message ?: "Failed to load profile"
+                )
+                return@launch
+            }
+
+            val resolved = resolveResult.getOrNull()
+            if (resolved == null) {
+                _uiState.value = PublicProfileUiState(isLoading = false, notFound = true)
+                return@launch
+            }
+
+            resolvedUsername = resolved.first
+            targetPageId = resolved.second
+
+            // Step 2: Fetch full profile
+            val result = profileRepository.getProfile(resolvedUsername)
 
             result.onFailure { e ->
                 _uiState.value = PublicProfileUiState(
@@ -130,11 +157,11 @@ class ProfileViewModel @Inject constructor(
                 isOwnProfile = profile.uid == auth.currentUser?.uid
             )
 
-            val pagesResult = pageRepository.getPages(username)
+            val pagesResult = pageRepository.getPages(resolvedUsername)
             val pages = pagesResult.getOrDefault(emptyList())
 
-            val currentPage = if (pageSlug != null) {
-                pages.find { it.slug == pageSlug }
+            val currentPage = if (targetPageId != null) {
+                pages.find { it.id == targetPageId }
                     ?: pages.find { it.id == profile.defaultPageId }
                     ?: pages.firstOrNull()
             } else {
@@ -144,7 +171,7 @@ class ProfileViewModel @Inject constructor(
             _uiState.value = _uiState.value.copy(pages = pages, currentPage = currentPage)
 
             if (currentPage != null) {
-                val blocksResult = blockRepository.getBlocks(username, currentPage.id)
+                val blocksResult = blockRepository.getBlocks(resolvedUsername, currentPage.id)
                 _uiState.value = _uiState.value.copy(
                     blocks = blocksResult.getOrDefault(emptyList()),
                     isLoading = false
@@ -158,6 +185,7 @@ class ProfileViewModel @Inject constructor(
 
     private fun checkPageFavorited(pageId: String) {
         val userId = auth.currentUser?.uid ?: return
+        val username = resolvedUsername.ifEmpty { return }
         viewModelScope.launch {
             val isFavorited = favoritesRepository.isPageFavorited(userId, username, pageId)
                 .getOrDefault(false)
@@ -166,6 +194,7 @@ class ProfileViewModel @Inject constructor(
     }
 
     fun selectPage(page: BentoPage) {
+        val username = resolvedUsername.ifEmpty { return }
         _uiState.value = _uiState.value.copy(currentPage = page, blocks = emptyList(), isFavorited = false, isLoading = true)
         viewModelScope.launch {
             val blocksResult = blockRepository.getBlocks(username, page.id)
@@ -188,6 +217,7 @@ class ProfileViewModel @Inject constructor(
         }
         val currentPage = _uiState.value.currentPage ?: return
         val profile = _uiState.value.profile ?: return
+        val username = resolvedUsername.ifEmpty { return }
         val currentlyFavorited = _uiState.value.isFavorited
 
         // Optimistic update

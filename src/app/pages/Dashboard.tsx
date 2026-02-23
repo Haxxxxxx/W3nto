@@ -275,7 +275,9 @@ export default function Dashboard() {
   };
 
   const handleSharePage = (page: BentoPage) => {
-    const url = `${window.location.origin}/${profile?.username}/${page.slug}`;
+    const url = page.slug
+      ? `${window.location.origin}/${page.slug}`
+      : `${window.location.origin}/${profile?.username}`;
     setShareUrl(url);
   };
 
@@ -367,7 +369,8 @@ export default function Dashboard() {
 
   const handlePreview = () => {
     if (profile && currentPage) {
-      window.open(`/${profile.username}/${currentPage.slug}`, "_blank");
+      const url = currentPage.slug ? `/${currentPage.slug}` : `/${profile.username}`;
+      window.open(url, "_blank");
     }
   };
 

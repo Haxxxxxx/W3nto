@@ -61,17 +61,16 @@ export const ogRewriter = functions.https.onRequest(async (req, res) => {
   const urlPath = req.path.replace(/\/+$/, "") || "/";
   const segments = urlPath.split("/").filter(Boolean);
 
-  // Only handle /{username} and /{username}/{pageSlug}
-  if (segments.length === 0 || segments.length > 2) {
+  // Only handle single-segment paths: /{slug} (slug = username or page slug)
+  if (segments.length === 0 || segments.length > 1) {
     serveApp(res);
     return;
   }
 
-  const username = segments[0].toLowerCase();
-  const pageSlug = segments[1]?.toLowerCase();
+  const slug = segments[0].toLowerCase();
 
   // Let reserved routes and static-file-looking paths fall through to the SPA
-  if (RESERVED_ROUTES.has(username) || username.startsWith("_") || username.includes(".")) {
+  if (RESERVED_ROUTES.has(slug) || slug.startsWith("_") || slug.includes(".")) {
     serveApp(res);
     return;
   }
@@ -83,8 +82,32 @@ export const ogRewriter = functions.https.onRequest(async (req, res) => {
     return;
   }
 
-  // --- Crawler path: fetch profile and build dynamic OG HTML ---
+  // --- Crawler path: resolve slug → profile, then build dynamic OG HTML ---
   try {
+    let username = slug;
+    let pageTitle = "";
+    const canonicalUrl = `https://w3nto.app/${slug}`;
+
+    // Try slug registry first: slug may point to a specific page
+    const slugDoc = await db.collection("slugs").doc(slug).get();
+    if (slugDoc.exists) {
+      const slugData = slugDoc.data()!;
+      username = slugData.username;
+      const pageId = slugData.pageId as string;
+
+      // Fetch page name for richer OG title
+      const pageDoc = await db
+        .collection("profiles")
+        .doc(username)
+        .collection("pages")
+        .doc(pageId)
+        .get();
+      if (pageDoc.exists) {
+        pageTitle = pageDoc.data()?.name || "";
+      }
+    }
+
+    // Fetch the profile (using resolved username)
     const profileDoc = await db.collection("profiles").doc(username).get();
 
     if (!profileDoc.exists) {
@@ -98,21 +121,6 @@ export const ogRewriter = functions.https.onRequest(async (req, res) => {
     const displayName = profile.displayName || username;
     const bio = profile.bio || "Web3 profile on W3nto";
     const avatar = profile.avatar || "https://w3nto.app/og-default.svg";
-    const url = `https://w3nto.app/${username}${pageSlug ? `/${pageSlug}` : ""}`;
-
-    let pageTitle = "";
-    if (pageSlug) {
-      const pagesSnapshot = await db
-        .collection("profiles")
-        .doc(username)
-        .collection("pages")
-        .where("slug", "==", pageSlug)
-        .limit(1)
-        .get();
-      if (!pagesSnapshot.empty) {
-        pageTitle = pagesSnapshot.docs[0].data().name || "";
-      }
-    }
 
     const title = pageTitle
       ? `${pageTitle} — ${displayName} on W3nto`
@@ -120,7 +128,7 @@ export const ogRewriter = functions.https.onRequest(async (req, res) => {
     const description =
       bio.length > 160 ? bio.substring(0, 157) + "..." : bio;
 
-    const html = buildDynamicHtml(indexHtml, title, description, avatar, url);
+    const html = buildDynamicHtml(indexHtml, title, description, avatar, canonicalUrl);
 
     res.set("Cache-Control", "public, max-age=300, s-maxage=600");
     res.set("Content-Type", "text/html; charset=utf-8");

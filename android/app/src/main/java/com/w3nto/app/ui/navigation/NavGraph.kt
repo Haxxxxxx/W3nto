@@ -147,6 +147,7 @@ fun NavGraph(
             composable(Screen.Discover.route) {
                 DiscoverScreen(
                     onProfileClick = { username ->
+                        // Username is the slug for profile-level navigation
                         navController.navigate(Screen.PublicProfile().createRoute(username))
                     }
                 )
@@ -154,10 +155,8 @@ fun NavGraph(
 
             composable(Screen.Favorites.route) {
                 FavoritesScreen(
-                    onPageClick = { username, pageSlug ->
-                        navController.navigate(
-                            Screen.PublicProfile().createRoute(username, pageSlug.takeIf { it.isNotEmpty() })
-                        )
+                    onPageClick = { slug ->
+                        navController.navigate(Screen.PublicProfile().createRoute(slug))
                     }
                 )
             }
@@ -175,21 +174,14 @@ fun NavGraph(
             }
 
             composable(
-                route = "profile/{username}?page={pageSlug}",
+                route = "profile/{slug}",
                 arguments = listOf(
-                    navArgument("username") { type = NavType.StringType },
-                    navArgument("pageSlug") {
-                        type = NavType.StringType
-                        nullable = true
-                        defaultValue = null
-                    }
+                    navArgument("slug") { type = NavType.StringType }
                 )
             ) { backStackEntry ->
-                val username = backStackEntry.arguments?.getString("username") ?: return@composable
-                val pageSlug = backStackEntry.arguments?.getString("pageSlug")
+                val slug = backStackEntry.arguments?.getString("slug") ?: return@composable
                 PublicProfileScreen(
-                    username = username,
-                    pageSlug = pageSlug,
+                    slug = slug,
                     onBack = {
                         if (!navController.popBackStack()) {
                             navController.navigate(Screen.Discover.route) {

@@ -1,7 +1,8 @@
 import { useParams, useNavigate, Link } from "react-router";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { Profile, BentoPage, Block } from "../types";
 import { getProfileByUsername } from "../utils/storage";
+import { getSlugInfo } from "../services/firestore";
 import { ExternalLink, Grid3x3, ArrowLeft, Share2 } from "lucide-react";
 import W3ntoLogo from "../components/W3ntoLogo";
 import ShareModal from "../components/ShareModal";
@@ -9,7 +10,7 @@ import TokenChart from "../components/TokenChart";
 import { socialPlatforms, chainLogos } from "../utils/socialPlatforms";
 
 export default function UserProfile() {
-  const { username, pageSlug } = useParams();
+  const { slug } = useParams();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [currentPage, setCurrentPage] = useState<BentoPage | null>(null);
@@ -28,7 +29,7 @@ export default function UserProfile() {
   }, []);
 
   useEffect(() => {
-    if (!username) return;
+    if (!slug) return;
 
     let cancelled = false;
 
@@ -38,7 +39,18 @@ export default function UserProfile() {
       setNetworkError(false);
 
       try {
-        const userProfile = await getProfileByUsername(username!);
+        let userProfile: Profile | null = null;
+        let targetPageId: string | undefined;
+
+        // Slug lookup first: check if slug maps to a page
+        const slugInfo = await getSlugInfo(slug!);
+        if (slugInfo) {
+          userProfile = await getProfileByUsername(slugInfo.username);
+          targetPageId = slugInfo.pageId;
+        } else {
+          // Fallback: treat slug as a username
+          userProfile = await getProfileByUsername(slug!);
+        }
 
         if (cancelled) return;
 
@@ -51,10 +63,10 @@ export default function UserProfile() {
         setProfile(userProfile);
 
         let page: BentoPage | undefined;
-        if (pageSlug) {
-          page = userProfile.pages.find((p) => p.slug === pageSlug);
+        if (targetPageId) {
+          page = userProfile.pages.find((p) => p.id === targetPageId);
         } else {
-          page = userProfile.pages.find((p) => p.id === userProfile.defaultPageId) || userProfile.pages[0];
+          page = userProfile.pages.find((p) => p.id === userProfile!.defaultPageId) || userProfile.pages[0];
         }
         setCurrentPage(page || null);
       } catch {
@@ -66,7 +78,7 @@ export default function UserProfile() {
 
     loadProfile();
     return () => { cancelled = true; };
-  }, [username, pageSlug]);
+  }, [slug]);
 
   // Dynamic document title
   useEffect(() => {
@@ -83,9 +95,10 @@ export default function UserProfile() {
   useEffect(() => {
     if (!profile) return;
 
+    // Page slug URL takes precedence; fall back to username for the default page
     const url =
-      currentPage && profile.pages.length > 1 && currentPage.id !== profile.defaultPageId
-        ? `https://w3nto.app/${profile.username}/${currentPage.slug}`
+      currentPage && currentPage.slug && profile.pages.length > 1 && currentPage.id !== profile.defaultPageId
+        ? `https://w3nto.app/${currentPage.slug}`
         : `https://w3nto.app/${profile.username}`;
 
     let link = document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
@@ -167,7 +180,7 @@ export default function UserProfile() {
           </div>
           <h1 className="text-3xl mb-3">Profile not found</h1>
           <p className="text-gray-600 mb-8">
-            The profile "{username}" doesn't exist or hasn't been created yet.
+            "{slug}" doesn't exist or hasn't been created yet.
           </p>
           <button
             onClick={() => navigate("/")}
@@ -440,9 +453,9 @@ export default function UserProfile() {
 
           <button
             onClick={() => {
-              const url = (profile.pages.length <= 1 || currentPage.id === profile.defaultPageId)
+              const url = (profile.pages.length <= 1 || currentPage.id === profile.defaultPageId || !currentPage.slug)
                 ? `${window.location.origin}/${profile.username}`
-                : `${window.location.origin}/${profile.username}/${currentPage.slug}`;
+                : `${window.location.origin}/${currentPage.slug}`;
               setShareUrl(url);
             }}
             className="mt-4 px-4 py-2 rounded-full text-sm inline-flex items-center gap-2 transition-all hover:scale-105"
@@ -460,7 +473,7 @@ export default function UserProfile() {
               {profile.pages.map((page) => (
                 <Link
                   key={page.id}
-                  to={`/${profile.username}/${page.slug}`}
+                  to={page.slug ? `/${page.slug}` : `/${profile.username}`}
                   className="px-4 py-2 rounded-full text-sm transition-all"
                   style={{
                     backgroundColor: page.id === currentPage.id ? currentPage.theme.buttonBackground : currentPage.theme.cardBackground,

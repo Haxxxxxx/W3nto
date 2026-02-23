@@ -32,7 +32,7 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FavoritesScreen(
-    onPageClick: (username: String, pageSlug: String) -> Unit,
+    onPageClick: (slug: String) -> Unit,
     viewModel: FavoritesViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -72,7 +72,7 @@ fun FavoritesScreen(
                             SwipeToDeleteFavoriteItem(
                                 favorite = fav,
                                 onDelete = { viewModel.removeFavorite(fav.username, fav.pageId) },
-                                onClick = { onPageClick(fav.username, fav.pageSlug) }
+                                onClick = { onPageClick(fav.pageSlug.ifEmpty { fav.username }) }
                             )
                         }
                     }

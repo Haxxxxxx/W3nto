@@ -83,6 +83,19 @@ export async function saveProfile(profile: Profile): Promise<void> {
 }
 
 export async function deleteProfile(username: string): Promise<void> {
+  // Delete slugs for all pages before deleting the profile
+  const pagesSnap = await getDocs(collection(db, "profiles", username, "pages"));
+  for (const pageDoc of pagesSnap.docs) {
+    const pageSlug = pageDoc.data()?.slug;
+    if (pageSlug) {
+      await deleteSlug(pageSlug);
+    }
+    const blocksSnap = await getDocs(collection(db, "profiles", username, "pages", pageDoc.id, "blocks"));
+    for (const blockDoc of blocksSnap.docs) {
+      await deleteDoc(blockDoc.ref);
+    }
+    await deleteDoc(pageDoc.ref);
+  }
   await deleteDoc(doc(db, "profiles", username));
 }
 
@@ -121,7 +134,20 @@ export async function renameProfile(oldUsername: string, newUsername: string, ui
     }, { merge: true });
   }
 
-  // 5.5. Update favorites across all users that reference the old username
+  // 5.5. Update slug registry — point each page's slug to the new username
+  for (const pageDoc of pagesSnap.docs) {
+    const pageSlug = pageDoc.data()?.slug;
+    if (pageSlug) {
+      await setDoc(doc(db, "slugs", pageSlug), {
+        username: newUsername,
+        pageId: pageDoc.id,
+        uid,
+        updatedAt: serverTimestamp(),
+      });
+    }
+  }
+
+  // 5.6 Update favorites across all users that reference the old username
   // Note: This requires querying across all users' favorites subcollections.
   // Firestore doesn't support collection group queries on subcollections with
   // arbitrary parent paths efficiently. For now, we skip this — favorites
@@ -178,13 +204,28 @@ export async function savePage(username: string, page: BentoPage): Promise<void>
     updatedAt: serverTimestamp(),
   };
 
-  // Only set createdAt on first write
+  // Only set createdAt on first write; also track old slug for rename detection
   const pageDoc = await getDoc(pageRef);
-  if (!pageDoc.exists()) {
+  const isNew = !pageDoc.exists();
+  const oldSlug: string | undefined = isNew ? undefined : pageDoc.data()?.slug;
+
+  if (isNew) {
     pageData.createdAt = serverTimestamp();
   }
 
   await setDoc(pageRef, pageData, { merge: true });
+
+  // Sync slug registry
+  if (page.slug) {
+    if (isNew) {
+      // New page — register slug
+      await createSlug(page.slug, username, page.id, uid);
+    } else if (oldSlug && oldSlug !== page.slug) {
+      // Slug renamed — delete old, create new
+      await deleteSlug(oldSlug);
+      await createSlug(page.slug, username, page.id, uid);
+    }
+  }
 
   // Save all blocks for this page
   for (const block of page.blocks) {
@@ -193,6 +234,10 @@ export async function savePage(username: string, page: BentoPage): Promise<void>
 }
 
 export async function deletePage(username: string, pageId: string): Promise<void> {
+  // Read page slug before deleting
+  const pageDoc = await getDoc(doc(db, "profiles", username, "pages", pageId));
+  const pageSlug: string | undefined = pageDoc.exists() ? pageDoc.data()?.slug : undefined;
+
   // Delete blocks first
   const blocksSnap = await getDocs(
     collection(db, "profiles", username, "pages", pageId, "blocks")
@@ -201,6 +246,11 @@ export async function deletePage(username: string, pageId: string): Promise<void
     await deleteDoc(blockDoc.ref);
   }
   await deleteDoc(doc(db, "profiles", username, "pages", pageId));
+
+  // Remove slug from registry
+  if (pageSlug) {
+    await deleteSlug(pageSlug);
+  }
 }
 
 // --- Blocks ---
@@ -286,6 +336,23 @@ export async function deleteBlock(
   await deleteDoc(
     doc(db, "profiles", username, "pages", pageId, "blocks", blockId)
   );
+}
+
+// --- Slug Registry ---
+
+export async function getSlugInfo(slug: string): Promise<{ username: string; pageId: string; uid: string } | null> {
+  const snap = await getDoc(doc(db, "slugs", slug));
+  if (!snap.exists()) return null;
+  const data = snap.data();
+  return { username: data.username, pageId: data.pageId, uid: data.uid };
+}
+
+export async function createSlug(slug: string, username: string, pageId: string, uid: string): Promise<void> {
+  await setDoc(doc(db, "slugs", slug), { username, pageId, uid, updatedAt: serverTimestamp() });
+}
+
+export async function deleteSlug(slug: string): Promise<void> {
+  await deleteDoc(doc(db, "slugs", slug));
 }
 
 // --- Helpers ---

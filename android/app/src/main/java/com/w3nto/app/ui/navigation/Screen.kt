@@ -9,15 +9,8 @@ sealed class Screen(val route: String) {
     data object Settings : Screen("settings")
     data object Onboarding : Screen("onboarding")
     data class PublicProfile(
-        val username: String = "{username}",
-        val pageSlug: String? = null
-    ) : Screen("profile/{username}?page={pageSlug}") {
-        fun createRoute(username: String, pageSlug: String? = null): String {
-            return if (pageSlug != null) {
-                "profile/$username?page=$pageSlug"
-            } else {
-                "profile/$username"
-            }
-        }
+        val slug: String = "{slug}"
+    ) : Screen("profile/{slug}") {
+        fun createRoute(slug: String): String = "profile/$slug"
     }
 }

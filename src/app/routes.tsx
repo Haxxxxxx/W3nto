@@ -12,8 +12,7 @@ export const router = createBrowserRouter([
     children: [
       { index: true, Component: Landing },
       { path: "dashboard", Component: Dashboard },
-      { path: ":username", Component: UserProfile },
-      { path: ":username/:pageSlug", Component: UserProfile },
+      { path: ":slug", Component: UserProfile },
       { path: "*", Component: NotFound },
     ],
   },

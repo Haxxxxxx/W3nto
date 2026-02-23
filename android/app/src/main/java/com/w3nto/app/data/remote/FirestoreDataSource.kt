@@ -13,6 +13,8 @@ import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
 
+data class SlugInfo(val username: String, val pageId: String, val uid: String)
+
 @Singleton
 class FirestoreDataSource @Inject constructor(
     private val firestore: FirebaseFirestore
@@ -123,6 +125,19 @@ class FirestoreDataSource @Inject constructor(
     suspend fun isUsernameAvailable(username: String): Boolean {
         val doc = firestore.collection("profiles").document(username).get().await()
         return !doc.exists()
+    }
+
+    // ── Slug Registry ──
+
+    suspend fun getSlugInfo(slug: String): SlugInfo? {
+        val doc = firestore.collection("slugs").document(slug).get().await()
+        if (!doc.exists()) return null
+        val data = doc.data ?: return null
+        return SlugInfo(
+            username = data["username"] as? String ?: return null,
+            pageId = data["pageId"] as? String ?: return null,
+            uid = data["uid"] as? String ?: return null
+        )
     }
 
     suspend fun createWalletLookup(walletAddress: String, username: String, uid: String) {

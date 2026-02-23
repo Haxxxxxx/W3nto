@@ -87,19 +87,14 @@ class MainActivity : ComponentActivity() {
                 }
             }
             "https", "http" -> {
-                // HTTPS deep links: w3nto.app/{username} or w3nto.app/{username}/{pageSlug}
+                // HTTPS deep links: w3nto.app/{slug}
+                // slug can be a username (^[a-z0-9_]{3,30}$) or a page slug (^[a-z0-9_-]{1,50}$)
                 val pathSegments = uri.pathSegments ?: return
                 if (pathSegments.isEmpty()) return
-                val username = pathSegments[0].lowercase().take(30)
-                val pageSlug = pathSegments.getOrNull(1)?.lowercase()?.take(50)
-                // Only proceed if username has valid format
-                if (!username.matches(Regex("^[a-z0-9_]{1,30}$"))) return
-                val route = if (pageSlug != null) {
-                    "profile/$username?page=$pageSlug"
-                } else {
-                    "profile/$username"
-                }
-                _pendingDeepLinkRoute.value = route
+                val slug = pathSegments[0].lowercase().take(50)
+                // Only proceed if slug has valid format (alphanumeric + underscore + hyphen)
+                if (!slug.matches(Regex("^[a-z0-9_-]{1,50}$"))) return
+                _pendingDeepLinkRoute.value = "profile/$slug"
             }
         }
     }
